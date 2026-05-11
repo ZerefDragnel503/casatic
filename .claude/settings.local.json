@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Start-Process \"C:\\\\Program Files\\\\Docker\\\\Docker\\\\Docker Desktop.exe\" -ErrorAction SilentlyContinue)",
+      "PowerShell(docker inspect casatic-frontend --format='{{json .State.Health}}' 2>&1 | ConvertFrom-Json | Select-Object -ExpandProperty Log | Select-Object -Last 3 | ForEach-Object { Write-Host \"Exit:$\\($_.ExitCode\\) Output:$\\($_.Output\\)\" })",
+      "PowerShell(docker exec casatic-frontend nginx -t 2>&1)",
+      "PowerShell(docker exec casatic-frontend sh -c \"netstat -tlnp 2>/dev/null || ss -tlnp\" 2>&1)"
+    ]
+  }
+}

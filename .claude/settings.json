@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(docker exec casatic-db psql -U casatic -d casatic_directorio -f /tmp/data.sql 2>&1)",
+      "PowerShell(docker cp \"c:\\\\Users\\\\it\\\\Desktop\\\\casatic\\\\backend\\\\docker script\\\\data_utf8.sql\" casatic-db:/tmp/data_utf8.sql)",
+      "PowerShell(docker exec casatic-db psql -U casatic -d casatic_directorio -f /tmp/data_utf8.sql 2>&1)",
+      "PowerShell(Invoke-RestMethod -Uri \"http://localhost/api/directorio?page=1&pageSize=5\" -Method GET)",
+      "PowerShell(docker compose ps frontend)"
+    ]
+  }
+}
