@@ -1,12 +1,33 @@
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useEffect, useState } from 'react';
 import api from '../api/client';
-import { saveSession, getUser, clearSession } from '../lib/auth';
+import { saveSession, getToken, getUser, clearSession } from '../lib/auth';
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => getUser());
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const token = getToken();
+    if (!token) return;
+
+    api.get('/auth/me')
+      .then(({ data }) => {
+        saveSession({
+          token,
+          email: data.email,
+          rol: data.rol,
+          primerLogin: data.primerLogin,
+          socioId: data.socioId,
+        });
+        setUser(getUser());
+      })
+      .catch(() => {
+        clearSession();
+        setUser(null);
+      });
+  }, []);
 
   const login = async (email, password) => {
     setLoading(true);

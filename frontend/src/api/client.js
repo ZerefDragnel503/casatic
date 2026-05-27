@@ -73,5 +73,9 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+api.enviarFormulario = (socioId, payload) =>
+  api.post(`/formulariocontacto/${socioId}`, payload);
 
+api.enviarFormularioPorSlug = (slug, payload) =>
+  api.post(`/formulariocontacto/slug/${slug}`, payload);
 export default api;

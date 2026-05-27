@@ -13,6 +13,16 @@ public class DirectorioFilterDto
     public string? Especialidad { get; set; }
 
     /// <summary>
+    /// Filtrar por varias especialidades. Tambien se acepta Especialidad con valores separados por coma.
+    /// </summary>
+    public List<string> Especialidades { get; set; } = new();
+
+    /// <summary>
+    /// Filtrar por inicial del nombre de empresa.
+    /// </summary>
+    public string? Inicial { get; set; }
+
+    /// <summary>
     /// Filtrar por servicio.
     /// </summary>
     public string? Servicio { get; set; }

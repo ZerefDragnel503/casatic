@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import {
   Search, Home, Menu, X, Grid3X3, Mail, HelpCircle, Info, LogIn,
-  Phone, MapPin, Facebook, Linkedin, Instagram, Youtube,
+  Phone, MapPin, Facebook, Linkedin, Instagram, Youtube, Calendar
 } from 'lucide-react';
 import colorLogo from '../../img/Full Color v2@4x.png';
 import reverseLogo from '../../img/Reverse - v2@4x.png';
@@ -23,6 +23,7 @@ export default function PublicLayout() {
   const navLinks = [
     { to: '/',           label: 'Inicio',       icon: Home },
     { to: '/directorio', label: 'Directorio',   icon: Search },
+    { to: '/eventos',    label: 'Eventos',      icon: Calendar },
     { to: '/presentacion', label: 'Presentación', icon: Info },
     { to: '/categorias', label: 'Categorías',   icon: Grid3X3 },
     { to: '/contacto',   label: 'Contacto',     icon: Mail },

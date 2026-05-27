@@ -1,5 +1,5 @@
-using AutoMapper;
 using CasaticDirectorio.Api.DTOs.Directorio;
+using CasaticDirectorio.Api.Mapping;
 using CasaticDirectorio.Api.DTOs.Socios;
 using CasaticDirectorio.Api.Services;
 using CasaticDirectorio.Domain.Enums;
@@ -16,13 +16,11 @@ namespace CasaticDirectorio.Api.Controllers;
 public class DirectorioController : ControllerBase
 {
     private readonly ISocioRepository _socios;
-    private readonly IMapper _mapper;
     private readonly ILogService _logService;
 
-    public DirectorioController(ISocioRepository socios, IMapper mapper, ILogService logService)
+    public DirectorioController(ISocioRepository socios, ILogService logService)
     {
         _socios = socios;
-        _mapper = mapper;
         _logService = logService;
     }
 
@@ -32,9 +30,17 @@ public class DirectorioController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> Search([FromQuery] DirectorioFilterDto filtro)
     {
+        var especialidades = filtro.Especialidades.ToList();
+        if (!string.IsNullOrWhiteSpace(filtro.Especialidad))
+        {
+            especialidades.AddRange(filtro.Especialidad
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+        }
+
         var (items, total) = await _socios.SearchAsync(
             filtro.Query,
-            filtro.Especialidad,
+            especialidades,
+            filtro.Inicial,
             filtro.Servicio,
             filtro.Producto,
             filtro.Sector,
@@ -56,7 +62,7 @@ public class DirectorioController : ControllerBase
 
         var result = new PagedResult<SocioListDto>
         {
-            Items = _mapper.Map<List<SocioListDto>>(items),
+            Items = items.Select(s => s.ToListDto()).ToList(),
             Total = total,
             Page = filtro.Page,
             PageSize = filtro.PageSize
@@ -83,7 +89,7 @@ public class DirectorioController : ControllerBase
             ip: HttpContext.Connection.RemoteIpAddress?.ToString(),
             userAgent: Request.Headers.UserAgent.ToString());
 
-        return Ok(_mapper.Map<SocioDto>(socio));
+        return Ok(socio.ToDto());
     }
 
     /// <summary>
@@ -103,7 +109,7 @@ public class DirectorioController : ControllerBase
             ip: HttpContext.Connection.RemoteIpAddress?.ToString(),
             userAgent: Request.Headers.UserAgent.ToString());
 
-        return Ok(_mapper.Map<SocioDto>(socio));
+        return Ok(socio.ToDto());
     }
 
     /// <summary>

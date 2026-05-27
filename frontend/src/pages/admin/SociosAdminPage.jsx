@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../api/client';
 import {
   Building2, Plus, Edit, Trash2, ToggleLeft, ToggleRight,
   AlertTriangle, Search, RefreshCw
 } from 'lucide-react';
+import CompanyFilters, { LETTER_OPTIONS as LETTERS, matchesInitial } from '../../components/filters/CompanyFilters';
 
 function TableSkeleton() {
   return (
@@ -24,6 +25,8 @@ export default function SociosAdminPage() {
   const [socios, setSocios] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [letter, setLetter] = useState('Todos');
+  const [selectedEspecialidades, setSelectedEspecialidades] = useState([]);
 
   const loadSocios = () => {
     setLoading(true);
@@ -50,9 +53,35 @@ export default function SociosAdminPage() {
     loadSocios();
   };
 
-  const filtered = socios.filter((s) =>
-    s.nombreEmpresa.toLowerCase().includes(search.toLowerCase())
-  );
+  const especialidades = useMemo(() => {
+    const values = socios.flatMap((s) => s.especialidades || []);
+    return [...new Set(values)].sort((a, b) => a.localeCompare(b));
+  }, [socios]);
+
+  const toggleEspecialidad = (value) => {
+    setSelectedEspecialidades((current) =>
+      current.includes(value)
+        ? current.filter((item) => item !== value)
+        : [...current, value]
+    );
+  };
+
+  const clearFilters = () => {
+    setSearch('');
+    setLetter('Todos');
+    setSelectedEspecialidades([]);
+  };
+
+  const filtered = socios.filter((s) => {
+    const term = search.toLowerCase();
+    const matchesSearch = !term || s.nombreEmpresa.toLowerCase().includes(term);
+    const matchesLetterFilter = matchesInitial(s.nombreEmpresa, letter);
+    const matchesEspecialidades = selectedEspecialidades.length === 0 ||
+      selectedEspecialidades.some((esp) => s.especialidades?.includes(esp));
+    return matchesSearch && matchesLetterFilter && matchesEspecialidades;
+  });
+
+  const hasFilters = search || letter !== 'Todos' || selectedEspecialidades.length > 0;
 
   return (
     <div className="space-y-6">
@@ -73,7 +102,21 @@ export default function SociosAdminPage() {
       </div>
 
       {/* ── Search Bar ────────────────────────────────── */}
-      <div className="card-base p-3 flex flex-wrap items-center gap-3">
+      <CompanyFilters
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Buscar por nombre de empresa..."
+        letter={letter}
+        onLetterChange={setLetter}
+        especialidades={especialidades}
+        selectedEspecialidades={selectedEspecialidades}
+        onToggleEspecialidad={toggleEspecialidad}
+        onClearEspecialidades={() => setSelectedEspecialidades([])}
+        onClearAll={clearFilters}
+        resultCount={filtered.length}
+      />
+
+      <div className="hidden">
         <div className="flex-1 min-w-[200px] relative">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-surface-400" />
           <input
@@ -84,9 +127,61 @@ export default function SociosAdminPage() {
             className="input-field pl-9 text-sm"
           />
         </div>
+        {hasFilters && (
+          <button onClick={clearFilters} className="btn-secondary text-sm">
+            Limpiar
+          </button>
+        )}
         <span className="text-xs text-surface-400 font-medium px-2">
           {filtered.length} resultados
         </span>
+      </div>
+
+      <div className="hidden">
+        <div className="flex flex-wrap gap-1.5">
+          {LETTERS.map((item) => (
+            <button
+              key={item}
+              onClick={() => setLetter(item)}
+              className={`h-8 min-w-8 px-2 rounded-lg border text-xs font-bold transition-colors ${
+                letter === item
+                  ? 'bg-casatic-600 text-white border-casatic-600'
+                  : 'bg-white text-surface-600 border-surface-200 hover:border-casatic-300 hover:text-casatic-700'
+              }`}
+            >
+              {item}
+            </button>
+          ))}
+        </div>
+
+        <div className="card-base p-3">
+          <div className="flex items-center justify-between gap-3 mb-2">
+            <p className="text-xs font-bold uppercase tracking-wide text-surface-500">Especialidades</p>
+            {selectedEspecialidades.length > 0 && (
+              <button onClick={() => setSelectedEspecialidades([])} className="text-xs font-semibold text-casatic-600">
+                Limpiar especialidades
+              </button>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-2 max-h-28 overflow-y-auto">
+            {especialidades.map((esp) => {
+              const active = selectedEspecialidades.includes(esp);
+              return (
+                <button
+                  key={esp}
+                  onClick={() => toggleEspecialidad(esp)}
+                  className={`px-3 py-1.5 rounded-full border text-xs font-semibold transition-colors ${
+                    active
+                      ? 'bg-casatic-600 text-white border-casatic-600'
+                      : 'bg-white text-surface-600 border-surface-200 hover:border-casatic-300'
+                  }`}
+                >
+                  {esp}
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </div>
 
       {/* ── Table ─────────────────────────────────────── */}

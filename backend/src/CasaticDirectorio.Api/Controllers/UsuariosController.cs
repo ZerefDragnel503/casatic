@@ -1,5 +1,5 @@
 using System.Security.Cryptography;
-using AutoMapper;
+using CasaticDirectorio.Api.Mapping;
 using CasaticDirectorio.Api.DTOs.Usuarios;
 using CasaticDirectorio.Domain.Entities;
 using CasaticDirectorio.Domain.Enums;
@@ -11,7 +11,7 @@ namespace CasaticDirectorio.Api.Controllers;
 
 /// <summary>
 /// Gestión de usuarios — Solo Admin.
-/// Genera contraseñas temporales aleatorias, no hardcodeadas.
+/// Genera contraseñas temporales seguras para Admin y usa Socio123! para nuevos Socios.
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
@@ -19,13 +19,11 @@ namespace CasaticDirectorio.Api.Controllers;
 public class UsuariosController : ControllerBase
 {
     private readonly IUsuarioRepository _usuarios;
-    private readonly IMapper _mapper;
     private readonly ILogger<UsuariosController> _logger;
 
-    public UsuariosController(IUsuarioRepository usuarios, IMapper mapper, ILogger<UsuariosController> logger)
+    public UsuariosController(IUsuarioRepository usuarios, ILogger<UsuariosController> logger)
     {
         _usuarios = usuarios;
-        _mapper = mapper;
         _logger = logger;
     }
 
@@ -33,7 +31,7 @@ public class UsuariosController : ControllerBase
     public async Task<IActionResult> GetAll()
     {
         var usuarios = await _usuarios.GetAllAsync();
-        return Ok(_mapper.Map<List<UsuarioDto>>(usuarios));
+        return Ok(usuarios.Select(u => u.ToDto()).ToList());
     }
 
     [HttpGet("{id:guid}")]
@@ -41,7 +39,7 @@ public class UsuariosController : ControllerBase
     {
         var usuario = await _usuarios.GetByIdAsync(id);
         if (usuario == null) return NotFound();
-        return Ok(_mapper.Map<UsuarioDto>(usuario));
+        return Ok(usuario.ToDto());
     }
 
     /// <summary>
@@ -60,22 +58,19 @@ public class UsuariosController : ControllerBase
         if (!Enum.TryParse<Rol>(dto.Rol, true, out var rol))
             return BadRequest(new { message = "Rol inválido. Use Admin, Usuario o Socio." });
 
-        // Migración silenciosa: Rol.Socio (legado) → Rol.Usuario.
-        if (rol == Rol.Socio) rol = Rol.Usuario;
-
-        if (rol == Rol.Usuario && dto.SocioId == null)
-            return BadRequest(new { message = "Para rol Usuario debe indicar SocioId." });
+        if (rol == Rol.Socio && dto.SocioId == null)
+            return BadRequest(new { message = "Para rol Socio debe indicar SocioId." });
 
         if (rol == Rol.Admin)
             dto.SocioId = null;
 
-        var tempPassword = GenerarPasswordTemporal();
+        var initialPassword = rol == Rol.Socio ? "Socio123!" : GenerarPasswordTemporal();
 
         var usuario = new Usuario
         {
             Id = Guid.NewGuid(),
             Email = dto.Email,
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword(tempPassword),
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword(initialPassword),
             Rol = rol,
             PrimerLogin = true,
             Activo = true,
@@ -85,13 +80,13 @@ public class UsuariosController : ControllerBase
         await _usuarios.AddAsync(usuario);
         _logger.LogInformation("Usuario creado: {Email} con rol {Rol}", usuario.Email, rol);
 
-        var dtoResponse = _mapper.Map<UsuarioDto>(usuario);
+        var dtoResponse = usuario.ToDto();
 
         // ÚNICA respuesta donde se devuelve la contraseña en texto plano.
         return CreatedAtAction(nameof(GetById), new { id = usuario.Id }, new
         {
             usuario = dtoResponse,
-            passwordTemporal = tempPassword,
+            passwordTemporal = initialPassword,
             mensaje = "Entregá esta contraseña al usuario por un canal seguro. " +
                       "Deberá cambiarla en su primer login."
         });

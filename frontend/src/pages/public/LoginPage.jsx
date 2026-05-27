@@ -90,8 +90,8 @@ export default function LoginPage() {
           {/* Card */}
           <div className="bg-white rounded-3xl shadow-2xl p-7 sm:p-9">
             <div className="mb-7">
-              <h1 className="text-2xl font-bold text-surface-900 mb-1">Bienvenido</h1>
-              <p className="text-sm text-surface-500">Ingresa tus credenciales para continuar</p>
+              <h1 className="text-2xl font-bold text-surface-900 mb-1 text-center">Bienvenido</h1>
+              <p className="text-sm text-surface- text-center">Ingresa tus credenciales para continuar</p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">

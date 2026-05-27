@@ -80,4 +80,5 @@ public class Socio
     public List<FormularioContacto> Formularios { get; set; } = new();
     public List<LogActividad> Logs { get; set; } = new();
     public List<Evento> Eventos { get; set; } = new();
+    public Factura? Factura { get; set; }
 }

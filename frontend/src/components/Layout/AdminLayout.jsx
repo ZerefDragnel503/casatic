@@ -3,7 +3,8 @@ import { Outlet, Link, Navigate, useNavigate, useLocation } from 'react-router-d
 import { useAuth } from '../../context/AuthContext';
 import {
   LayoutDashboard, Building2, Users, LogOut, ChevronRight,
-  PanelLeftClose, PanelLeft, Bell, Menu, X, Inbox, BarChart3
+  PanelLeftClose, PanelLeft, Bell, Menu, X, Inbox, BarChart3, Calendar,
+  Moon, Sun, Receipt
 } from 'lucide-react';
 import casaticLogo from '../../img/Reverse - v2@4x.png';
 
@@ -78,6 +79,20 @@ export default function AdminLayout() {
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [darkMode, setDarkMode] = useState(() => {
+    const saved = localStorage.getItem('admin-dark-mode');
+    return saved ? JSON.parse(saved) : false;
+  });
+
+  // Aplicar dark mode al documento
+  useEffect(() => {
+    localStorage.setItem('admin-dark-mode', JSON.stringify(darkMode));
+    if (darkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [darkMode]);
 
   // Close drawer on route change
   useEffect(() => setMobileOpen(false), [location.pathname]);
@@ -90,10 +105,10 @@ export default function AdminLayout() {
 
   if (!user) return <Navigate to="/admin/login" replace />;
   if (user.primerLogin) return <Navigate to="/admin/cambiar-password" replace />;
-  
-  // Un socio solo puede gestionar su propia empresa.
-  // Cualquier intento de abrir otra ruta de /admin se redirige.
-  if (user.rol === 'Socio' && location.pathname !== '/admin/mi-empresa') {
+
+  // Un socio solo puede acceder a su empresa, eventos, formularios y facturacion.
+  const socioAllowed = ['/admin/mi-empresa', '/admin/eventos', '/admin/formularios', '/admin/facturacion'];
+  if (user.rol === 'Socio' && !socioAllowed.some(p => location.pathname.startsWith(p))) {
     return <Navigate to="/admin/mi-empresa" replace />;
   }
 
@@ -104,6 +119,8 @@ export default function AdminLayout() {
     { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true, roles: ['Admin'] },
     { to: '/admin/mi-empresa', label: 'Mi Empresa', icon: Building2, exact: true, roles: ['Socio'] },
     { to: '/admin/socios', label: 'Socios', icon: Building2, roles: ['Admin'] },
+    { to: '/admin/eventos', label: 'Eventos', icon: Calendar, roles: ['Admin', 'Socio'] },
+    { to: '/admin/facturacion', label: 'Facturacion', icon: Receipt, roles: ['Admin', 'Socio'] },
     { to: '/admin/formularios', label: 'Mensajes Recibidos', icon: Inbox, roles: ['Socio'] },
     { to: '/admin/formularios', label: 'Formularios', icon: Inbox, roles: ['Admin'] },
     { to: '/admin/reportes', label: 'Reportes', icon: BarChart3, roles: ['Admin'] },
@@ -190,6 +207,14 @@ export default function AdminLayout() {
             <span className="lg:hidden font-bold text-surface-900 text-sm">Casatic-Socio</span>
           </div>
           <div className="flex items-center gap-2">
+            {/* Dark mode toggle */}
+            <button
+              onClick={() => setDarkMode(!darkMode)}
+              className="p-2 rounded-xl text-surface-400 hover:bg-surface-100 hover:text-surface-700 transition-colors"
+              title={darkMode ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
+            >
+              {darkMode ? <Sun size={20} /> : <Moon size={20} />}
+            </button>
             <button className="p-2 rounded-xl text-surface-400 hover:bg-surface-100 hover:text-surface-700 transition-colors relative">
               <Bell size={20} />
               <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-casatic-500 rounded-full" />

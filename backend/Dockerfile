@@ -28,8 +28,8 @@ RUN apt-get update \
 
 COPY --from=build --chown=casatic:casatic /app/publish .
 
-# Asegurar que el directorio de logos existe y es escribible por el usuario.
-RUN mkdir -p /app/wwwroot/logos && chown -R casatic:casatic /app/wwwroot
+# Asegurar que los directorios de imagenes existen y son escribibles por el usuario.
+RUN mkdir -p /app/wwwroot/logos /app/wwwroot/uploads && chown -R casatic:casatic /app/wwwroot
 
 ENV ASPNETCORE_URLS=http://+:5000 \
     LANG=C.UTF-8 \

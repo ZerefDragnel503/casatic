@@ -10,5 +10,6 @@ public enum TipoEventoLogActividad
     Login = 2,
     EnvioFormulario = 3,
     CambioPassword = 4,
-    CrudSocio = 5
+    CrudSocio = 5,
+    LoginFallido = 6
 }
