@@ -1,6 +1,5 @@
 using System.Text;
 using System.Threading.RateLimiting;
-using CasaticDirectorio.Api.Mapping;
 using CasaticDirectorio.Api.Middleware;
 using CasaticDirectorio.Api.Services;
 using CasaticDirectorio.Domain.Interfaces;
@@ -63,9 +62,6 @@ builder.Services.AddScoped<IFormularioContactoRepository, FormularioContactoRepo
 builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddScoped<ILogService, LogService>();
 builder.Services.AddScoped<EventoService>();
-
-// ── AutoMapper ────────────────────────────────────────────
-builder.Services.AddAutoMapper(typeof(MappingProfile));
 
 // ── JWT Authentication ────────────────────────────────────
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -239,7 +235,6 @@ app.UseMiddleware<SecurityHeadersMiddleware>();
 // ── Static files para logos ─────────────────────────────
 var logosPath = Path.Combine(app.Environment.ContentRootPath, "wwwroot", "logos");
 Directory.CreateDirectory(logosPath);
-
 app.UseStaticFiles(new StaticFileOptions
 {
     FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(logosPath),
@@ -247,6 +242,19 @@ app.UseStaticFiles(new StaticFileOptions
     OnPrepareResponse = ctx =>
     {
         // Cache agresivo en logos: el nombre incluye Guid, así que son inmutables.
+        ctx.Context.Response.Headers["Cache-Control"] = "public, max-age=31536000, immutable";
+    }
+});
+
+// ── Static files para uploads de eventos y formularios ─────
+var uploadsPath = Path.Combine(app.Environment.ContentRootPath, "wwwroot", "uploads");
+Directory.CreateDirectory(uploadsPath);
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(uploadsPath),
+    RequestPath = "/uploads",
+    OnPrepareResponse = ctx =>
+    {
         ctx.Context.Response.Headers["Cache-Control"] = "public, max-age=31536000, immutable";
     }
 });

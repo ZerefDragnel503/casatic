@@ -49,15 +49,25 @@ export default function UsuariosAdminPage() {
     loadData();
   };
 
+  const [createdPassword, setCreatedPassword] = useState('');
+
   const handleCreate = async (e) => {
     e.preventDefault();
     setError(null);
+    setCreatedPassword('');
+
+    if (form.rol === 'Socio' && !form.socioId) {
+      setError('Selecciona una empresa para el rol Socio.');
+      return;
+    }
+
     try {
-      await api.post('/usuarios', {
+      const { data } = await api.post('/usuarios', {
         email: form.email,
         rol: form.rol,
         socioId: form.socioId || null,
       });
+      setCreatedPassword(data.passwordTemporal || '');
       setShowForm(false);
       setForm({ email: '', rol: 'Socio', socioId: '' });
       loadData();
@@ -87,6 +97,12 @@ export default function UsuariosAdminPage() {
         </button>
       </div>
 
+      {createdPassword && (
+        <div className="alert-success text-sm">
+          Contraseña creada: <strong>{createdPassword}</strong>. Comunicala al usuario y pídele que la cambie en su primer login.
+        </div>
+      )}
+
       {/* ── Formulario Crear Usuario ──────────────────── */}
       {showForm && (
         <div className="card-base p-6 animate-fade-in-down">
@@ -96,7 +112,11 @@ export default function UsuariosAdminPage() {
             </div>
             <div>
               <h3 className="font-bold text-surface-900">Crear Nuevo Acceso</h3>
-              <p className="text-xs text-surface-400">Contraseña inicial: Socio123!</p>
+              <p className="text-xs text-surface-400">
+                {form.rol === 'Socio'
+                  ? 'Contraseña inicial: Socio123! — el usuario deberá cambiarla en su primer login.'
+                  : 'Se generará una contraseña temporal segura y el usuario deberá cambiarla en su primer login.'}
+              </p>
             </div>
           </div>
 

@@ -2,6 +2,7 @@ using CasaticDirectorio.Domain.Entities;
 using CasaticDirectorio.Domain.Interfaces;
 using CasaticDirectorio.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;    
+using System.Text.RegularExpressions;
 
 namespace CasaticDirectorio.Infrastructure.Repositories;
 
@@ -21,7 +22,7 @@ public class SocioRepository : ISocioRepository
     /// y filtro opcional por especialidad.
     /// </summary>
     public async Task<(List<Socio> Items, int Total)> SearchAsync(
-        string? query, string? especialidad, string? servicio, string? producto, string? sector, string? estado, DateTime? fechaDesde, DateTime? fechaHasta, int page, int pageSize)
+        string? query, IEnumerable<string>? especialidades, string? inicial, string? servicio, string? producto, string? sector, string? estado, DateTime? fechaDesde, DateTime? fechaHasta, int page, int pageSize)
     {
         var q = _db.Socios.AsQueryable();
 
@@ -62,10 +63,29 @@ public class SocioRepository : ISocioRepository
             q = q.Where(s => s.SearchVector!.Matches(EF.Functions.PlainToTsQuery("spanish", sanitized)));
         }
 
-        // Filtro por especialidad (ANY en el array PostgreSQL)
-        if (!string.IsNullOrWhiteSpace(especialidad))
+        if (!string.IsNullOrWhiteSpace(inicial))
         {
-            q = q.Where(s => s.Especialidades.Contains(especialidad));
+            var value = inicial.Trim().ToUpperInvariant();
+            if (value == "0-9")
+            {
+                q = q.Where(s => Regex.IsMatch(s.NombreEmpresa, "^[0-9]"));
+            }
+            else if (value.Length == 1 && value[0] is >= 'A' and <= 'Z')
+            {
+                q = q.Where(s => EF.Functions.ILike(s.NombreEmpresa, $"{value}%"));
+            }
+        }
+
+        var especialidadesList = (especialidades ?? [])
+            .Where(e => !string.IsNullOrWhiteSpace(e))
+            .Select(e => e.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        // Filtro por una o varias especialidades (modo OR).
+        if (especialidadesList.Count > 0)
+        {
+            q = q.Where(s => s.Especialidades.Any(e => especialidadesList.Contains(e)));
         }
 
         // Filtro por servicio (ANY en el array PostgreSQL)

@@ -1,4 +1,4 @@
-using AutoMapper;
+using CasaticDirectorio.Api.Mapping;
 using CasaticDirectorio.Api.DTOs.Socios;
 using CasaticDirectorio.Api.Services;
 using CasaticDirectorio.Domain.Entities;
@@ -20,13 +20,11 @@ namespace CasaticDirectorio.Api.Controllers;
 public class SociosController : ControllerBase
 {
     private readonly ISocioRepository _socios;
-    private readonly IMapper _mapper;
     private readonly ILogService _logService;
 
-    public SociosController(ISocioRepository socios, IMapper mapper, ILogService logService)
+    public SociosController(ISocioRepository socios, ILogService logService)
     {
         _socios = socios;
-        _mapper = mapper;
         _logService = logService;
     }
 
@@ -37,7 +35,7 @@ public class SociosController : ControllerBase
     public async Task<IActionResult> GetAll()
     {
         var socios = await _socios.GetAllAsync();
-        return Ok(_mapper.Map<List<SocioDto>>(socios));
+        return Ok(socios.Select(s => s.ToDto()).ToList());
     }
 
     /// <summary>
@@ -48,7 +46,7 @@ public class SociosController : ControllerBase
     {
         var socio = await _socios.GetByIdAsync(id);
         if (socio == null) return NotFound();
-        return Ok(_mapper.Map<SocioDto>(socio));
+        return Ok(socio.ToDto());
     }
 
     /// <summary>
@@ -71,7 +69,7 @@ public class SociosController : ControllerBase
             dto.MarcasRepresenta.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries).Length > 50)
             return BadRequest(new { message = "Las marcas que representa no pueden exceder 50 palabras" });
 
-        var socio = _mapper.Map<Socio>(dto);
+        var socio = dto.ToEntity();
         socio.Id = Guid.NewGuid();
 
         // Auto-generar slug si viene vacío
@@ -87,7 +85,7 @@ public class SociosController : ControllerBase
 
         await _logService.RegistrarAsync(TipoEventoLogActividad.CrudSocio, query: $"Crear: {socio.NombreEmpresa}");
 
-        return CreatedAtAction(nameof(GetById), new { id = socio.Id }, _mapper.Map<SocioDto>(socio));
+        return CreatedAtAction(nameof(GetById), new { id = socio.Id }, socio.ToDto());
     }
 
     /// <summary>
@@ -125,7 +123,7 @@ public class SociosController : ControllerBase
 
         await _logService.RegistrarAsync(TipoEventoLogActividad.CrudSocio, query: $"Editar: {socio.NombreEmpresa}");
 
-        return Ok(_mapper.Map<SocioDto>(socio));
+        return Ok(socio.ToDto());
     }
 
     /// <summary>

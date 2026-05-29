@@ -1,5 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 export default {
+  darkMode: 'class',
   content: ['./index.html', './src/**/*.{js,jsx}'],
   theme: {
     extend: {
@@ -19,7 +20,7 @@ export default {
           700: '#0e3877',   // Base 02 — azul principal
           800: '#0b2a5a',
           900: '#0b0b35',   // Base 01 — azul oscuro
-          950: '#07071e',
+          950: '#010102',
         },
         // Complementario 02 — menta/turquesa
         accent: {

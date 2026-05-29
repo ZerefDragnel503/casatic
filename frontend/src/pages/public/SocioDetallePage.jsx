@@ -6,6 +6,20 @@ import {
   AlertCircle, Send,
 } from 'lucide-react';
 import api from '../../api/client';
+import LogoSlider from '../../components/LogoSlider';
+import partnerLogo1 from './img/socios e inversionistas/microsoft.png';
+import partnerLogo2 from './img/socios e inversionistas/pbs.png';
+import partnerLogo3 from './img/socios e inversionistas/tbox.png';
+import partnerLogo4 from './img/socios e inversionistas/aplaudo.png';
+import partnerLogo5 from './img/socios e inversionistas/acari.png';
+
+const sociosDelSocio = [
+  { img: partnerLogo1, link: 'https://www.microsoft.com/es-sv/' },
+  { img: partnerLogo2, link: 'https://www.grouppbs.com/' },
+  { img: partnerLogo3, link: 'https://www.tboxplanet.com/en/home' },
+  { img: partnerLogo4, link: 'http://www.applaudostudios.com/' },
+  { img: partnerLogo5, link: 'https://www.aracaristudios.com/' },
+];
 
 const socialLinks = [
   {
@@ -68,11 +82,18 @@ export default function SocioDetallePage() {
     setSubmitLoading(true);
     setSubmitMessage(null);
     try {
-      await api.post(`/formulariocontacto/${socio.id}`, {
+      const payload = {
         nombre: contactForm.nombre,
         correo: contactForm.correo,
         mensaje: contactForm.mensaje,
-      });
+      };
+
+      if (socio?.id) {
+        await api.enviarFormulario(socio.id, payload);
+      } else {
+        await api.enviarFormularioPorSlug(socio.slug, payload);
+      }
+
       setSubmitMessage({ type: 'success', text: 'Mensaje enviado correctamente. Nos pondremos en contacto pronto.' });
       setContactForm({ nombre: '', correo: '', mensaje: '' });
     } catch {
@@ -134,22 +155,9 @@ export default function SocioDetallePage() {
               )}
             </div>
             <div>
-              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white leading-tight">
-                {socio.nombreEmpresa}
+                  <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white leading-tight">
+                  {socio.nombreEmpresa}
               </h1>
-              {socio.estadoFinanciero && (
-                <span className={`inline-block mt-2 px-3 py-1 rounded-full text-xs font-semibold ${
-                  socio.estadoFinanciero === 'AlDia'
-                    ? 'bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-400/30'
-                    : socio.estadoFinanciero === 'Atrasado'
-                    ? 'bg-amber-500/20 text-amber-300 ring-1 ring-amber-400/30'
-                    : 'bg-red-500/20 text-red-300 ring-1 ring-red-400/30'
-                }`}>
-                  {socio.estadoFinanciero === 'AlDia' && '✓ Al Día'}
-                  {socio.estadoFinanciero === 'Atrasado' && '⚠ Atrasado'}
-                  {socio.estadoFinanciero === 'Suspendido' && '✗ Suspendido'}
-                </span>
-              )}
             </div>
           </div>
         </div>
@@ -203,13 +211,29 @@ export default function SocioDetallePage() {
               </div>
             )}
 
-            {/* Marcas */}
-            {socio.marcasRepresenta && (
-              <div className="card-base p-6 sm:p-8">
-                <h2 className="text-xl font-bold text-surface-900 mb-3">Marcas que representa</h2>
-                <p className="text-surface-600">{socio.marcasRepresenta}</p>
-              </div>
-            )}
+           {/* Marcas que representa (con logos) */}
+{socio.marcasRepresenta?.length > 0 && (
+  <div className="card-base p-6 sm:p-8">
+    <h2 className="text-xl font-bold text-surface-900 mb-6">
+      Marcas que representa
+    </h2>
+
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+      {socio.marcasRepresenta.map((marca, idx) => (
+        <div
+          key={idx}
+          className="flex items-center justify-center p-4 rounded-2xl border border-surface-200 bg-white hover:shadow-md transition-all"
+        >
+          <img
+            src={marca.logoUrl}
+            alt={marca.nombre}
+            className="max-h-16 object-contain"
+          />
+        </div>
+      ))}
+    </div>
+  </div>
+)}
 
             {/* Mapa */}
             {socio.mapaUrl && (
@@ -385,6 +409,15 @@ export default function SocioDetallePage() {
             </div>
 
           </div>
+        </div>
+
+        <div className="mt-10">
+          <LogoSlider
+            title={`Socios de ${socio.nombreEmpresa}`}
+            subtitle="Espacio preparado para mostrar aliados, clientes o socios relacionados con esta empresa"
+            items={sociosDelSocio}
+            perPage={5}
+          />
         </div>
       </div>
     </div>

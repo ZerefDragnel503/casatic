@@ -40,9 +40,7 @@ export default function MiEmpresaPage() {
     const fetchEmpresa = async () => {
       try {
         setLoading(true);
-        console.log('🔍 Iniciando fetch de /miempresa');
         const { data } = await api.get('/miempresa');
-        console.log('✅ Datos recibidos:', data);
         setForm({
           nombreEmpresa: data.nombreEmpresa || '',
           slug: data.slug || '',
@@ -62,21 +60,15 @@ export default function MiEmpresaPage() {
           rsYoutube: data.rsYoutube || '',
           mapaUrl: data.mapaUrl || '',
         });
-      } catch (err) {
-        console.error('❌ Error al cargar:', err);
-        console.error('Status:', err.response?.status);
-        console.error('Data:', err.response?.data);
+      } catch {
         setError('No se pudo cargar la información de tu empresa');
       } finally {
         setLoading(false);
       }
     };
-
-    console.log('👤 User:', user);
     if (user?.socioId || user?.email) {
       fetchEmpresa();
     } else {
-      console.warn('⚠️ Usuario no autenticado o sin SocioId');
       setLoading(false);
     }
   }, [user?.socioId]);
@@ -96,7 +88,7 @@ export default function MiEmpresaPage() {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       setForm((prev) => ({ ...prev, logoUrl: res.data.url }));
-    } catch (err) {
+    } catch {
       setUploadError(err.response?.data?.message || 'Error al subir la imagen');
     } finally {
       setUploadingLogo(false);
@@ -132,7 +124,7 @@ export default function MiEmpresaPage() {
       await api.put('/miempresa', payload);
       setError(null);
       window.scrollTo({ top: 0, behavior: 'smooth' });
-    } catch (err) {
+    } catch {
       setError(err.response?.data?.message || 'Error al guardar');
     } finally {
       setSaving(false);

@@ -10,6 +10,9 @@ public class FormularioContactoDto
     [Required, EmailAddress, MaxLength(256)]
     public string Correo { get; set; } = string.Empty;
 
+    [MaxLength(200)]
+    public string? Asunto { get; set; }
+
     [Required]
     public string Mensaje { get; set; } = string.Empty;
 }

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Mail, Phone, MapPin, Send, CheckCircle, AlertCircle, Loader2, Clock, Globe } from 'lucide-react';
+import api from '../../api/client';
 
 const INFO = [
   { icon: Mail, label: 'Correo electrónico', value: 'info@casatic.org.sv', href: 'mailto:info@casatic.org.sv' },
@@ -19,8 +20,7 @@ export default function ContactoPage() {
     e.preventDefault();
     setStatus('loading');
     try {
-      // Simula envío — integrar con endpoint propio cuando exista
-      await new Promise((r) => setTimeout(r, 1200));
+      await api.enviarContactoGeneral(form);
       setStatus('ok');
       setForm({ nombre: '', correo: '', asunto: '', mensaje: '' });
     } catch {

@@ -56,6 +56,46 @@ public class EventoService
     }
 
     /// <summary>
+    /// Lista todos los eventos para el panel admin/socio.
+    /// Admin ve todos; Socio ve solo los de su empresa.
+    /// </summary>
+    public async Task<List<EventoResponseDto>> GetAllAsync(Guid usuarioId, Rol rol)
+    {
+        var query = _db.Eventos.AsNoTracking().AsQueryable();
+
+        if (rol != Rol.Admin)
+        {
+            var usuario = await _db.Usuarios.AsNoTracking()
+                .FirstOrDefaultAsync(u => u.Id == usuarioId);
+            if (usuario?.SocioId != null)
+                query = query.Where(e => e.SocioId == usuario.SocioId);
+            else
+                return [];
+        }
+
+        return await query
+            .OrderByDescending(e => e.CreatedAt)
+            .Select(e => new EventoResponseDto
+            {
+                Id = e.Id,
+                Slug = e.Slug,
+                SocioId = e.SocioId,
+                SocioNombre = e.Socio.NombreEmpresa,
+                Titulo = e.Titulo,
+                Descripcion = e.Descripcion,
+                Tipo = e.Tipo.ToString(),
+                Modalidad = e.Modalidad.ToString(),
+                Estado = e.Estado.ToString(),
+                FechaInicio = e.FechaInicio,
+                FechaFin = e.FechaFin,
+                Lugar = e.Lugar,
+                ImagenUrl = e.ImageUrl,
+                Destacado = e.Destacado
+            })
+            .ToListAsync();
+    }
+
+    /// <summary>
     /// Lista próximos eventos publicados (visibles al público).
     /// </summary>
     public async Task<List<EventoResponseDto>> GetProximosEventosAsync()
@@ -127,9 +167,40 @@ public class EventoService
             throw new KeyNotFoundException("Evento no encontrado.");
 
         evento.Estado = EstadoEvento.Aprobado;
+        evento.Habilitado = true;
         evento.PublicadoAt = DateTime.UtcNow;
         evento.UpdatedAt = DateTime.UtcNow;
 
+        await _db.SaveChangesAsync();
+    }
+
+    /// <summary>
+    /// Rechaza un evento (admin).
+    /// </summary>
+    public async Task RechazarEventoAsync(Guid eventoId)
+    {
+        var evento = await _db.Eventos.FirstOrDefaultAsync(x => x.Id == eventoId);
+        if (evento == null)
+            throw new KeyNotFoundException("Evento no encontrado.");
+
+        evento.Estado = EstadoEvento.Rechazado;
+        evento.Habilitado = false;
+        evento.PublicadoAt = null;
+        evento.UpdatedAt = DateTime.UtcNow;
+
+        await _db.SaveChangesAsync();
+    }
+
+    /// <summary>
+    /// Elimina un evento (admin).
+    /// </summary>
+    public async Task DeleteAsync(Guid eventoId)
+    {
+        var evento = await _db.Eventos.FirstOrDefaultAsync(x => x.Id == eventoId);
+        if (evento == null)
+            throw new KeyNotFoundException("Evento no encontrado.");
+
+        _db.Eventos.Remove(evento);
         await _db.SaveChangesAsync();
     }
 

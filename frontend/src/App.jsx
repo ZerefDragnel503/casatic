@@ -22,6 +22,9 @@ const UsuariosAdminPage  = lazy(() => import('./pages/admin/UsuariosAdminPage'))
 const SocioFormPage      = lazy(() => import('./pages/admin/SocioFormPage'));
 const FormulariosAdminPage = lazy(() => import('./pages/admin/FormulariosAdminPage'));
 const ReportesPage       = lazy(() => import('./pages/admin/ReportesPage'));
+const EventosAdminPage   = lazy(() => import('./pages/admin/EventosAdminPage'));
+const EventosPage        = lazy(() => import('./pages/public/EventosPage'));
+const FacturacionPage    = lazy(() => import('./pages/admin/FacturacionPage'));
 
 
 /** Spinner de transición mientras carga el chunk */
@@ -47,6 +50,7 @@ export default function App() {
         <Route element={<PublicLayout />}>
           <Route path="/" element={<HomePage />} />
           <Route path="/directorio" element={<DirectorioPage />} />
+          <Route path="/eventos" element={<EventosPage />} />
           <Route path="/presentacion" element={<PresentacionPage />} />
           <Route path="/categorias" element={<CategoriasPage />} />
           <Route path="/contacto" element={<ContactoPage />} />
@@ -65,6 +69,8 @@ export default function App() {
         <Route element={<AdminLayout />}>
           <Route path="/admin" element={<DashboardPage />} />
           <Route path="/admin/mi-empresa" element={<MiEmpresaPage />} />
+          <Route path="/admin/eventos" element={<EventosAdminPage />} />
+          <Route path="/admin/facturacion" element={<FacturacionPage />} />
           <Route path="/admin/socios" element={<SociosAdminPage />} />
           <Route path="/admin/socios/nuevo" element={<SocioFormPage />} />
           <Route path="/admin/socios/:id" element={<SocioFormPage />} />

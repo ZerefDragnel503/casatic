@@ -92,8 +92,8 @@ public class ReportesController : ControllerBase
     [HttpGet("busquedas")]
     public async Task<IActionResult> GetBusquedas([FromQuery] DateTime? desde, [FromQuery] DateTime? hasta)
     {
-        var d = desde ?? DateTime.UtcNow.AddDays(-30);
-        var h = hasta ?? DateTime.UtcNow;
+        var d = EnsureUtc(desde ?? DateTime.UtcNow.AddDays(-30));
+        var h = EnsureUtc(hasta ?? DateTime.UtcNow);
         var logs = await _logs.GetByTipoAsync(TipoEventoLogActividad.Busqueda, d, h);
         return Ok(logs.Select(l => new { l.Fecha, l.Query, l.Ip }));
     }
@@ -101,8 +101,8 @@ public class ReportesController : ControllerBase
     [HttpGet("formularios")]
     public async Task<IActionResult> GetFormularios([FromQuery] DateTime? desde, [FromQuery] DateTime? hasta)
     {
-        var d = desde ?? DateTime.UtcNow.AddDays(-30);
-        var h = hasta ?? DateTime.UtcNow;
+        var d = EnsureUtc(desde ?? DateTime.UtcNow.AddDays(-30));
+        var h = EnsureUtc(hasta ?? DateTime.UtcNow);
         var formularios = await _formularios.GetAllAsync(d, h);
         return Ok(formularios.Select(f => new
         {
@@ -370,4 +370,12 @@ public class ReportesController : ControllerBase
             errores
         });
     }
+
+    private static DateTime EnsureUtc(DateTime value) =>
+        value.Kind switch
+        {
+            DateTimeKind.Utc => value,
+            DateTimeKind.Local => value.ToUniversalTime(),
+            _ => DateTime.SpecifyKind(value, DateTimeKind.Utc)
+        };
 }

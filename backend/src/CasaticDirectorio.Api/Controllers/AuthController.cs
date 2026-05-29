@@ -31,6 +31,7 @@ public class AuthController : ControllerBase
     private readonly IUsuarioRepository _usuarios;
     private readonly IJwtService _jwt;
     private readonly ILogService _logService;
+    private readonly ILogActividadRepository _logRepo;
     private readonly IWebHostEnvironment _env;
     private readonly ILogger<AuthController> _logger;
 
@@ -38,12 +39,14 @@ public class AuthController : ControllerBase
         IUsuarioRepository usuarios,
         IJwtService jwt,
         ILogService logService,
+        ILogActividadRepository logRepo,
         IWebHostEnvironment env,
         ILogger<AuthController> logger)
     {
         _usuarios = usuarios;
         _jwt = jwt;
         _logService = logService;
+        _logRepo = logRepo;
         _env = env;
         _logger = logger;
     }
@@ -71,7 +74,12 @@ public class AuthController : ControllerBase
 
         if (usuario == null || !isActive || !passwordOk)
         {
-            // Mismo mensaje en todos los caminos.
+            await _logService.RegistrarAsync(
+                TipoEventoLogActividad.LoginFallido,
+                query: req.Email,
+                ip: HttpContext.Connection.RemoteIpAddress?.ToString(),
+                userAgent: Request.Headers.UserAgent.ToString());
+
             return Unauthorized(new { message = "Credenciales inválidas" });
         }
 
@@ -79,6 +87,7 @@ public class AuthController : ControllerBase
 
         await _logService.RegistrarAsync(
             TipoEventoLogActividad.Login,
+            query: usuario.Email,
             usuarioId: usuario.Id,
             ip: HttpContext.Connection.RemoteIpAddress?.ToString(),
             userAgent: Request.Headers.UserAgent.ToString());
@@ -261,6 +270,65 @@ public class AuthController : ControllerBase
             ip: HttpContext.Connection.RemoteIpAddress?.ToString());
 
         return Ok(new { message = "Contraseña restablecida exitosamente" });
+    }
+
+    /// <summary>
+    /// Historial de accesos del usuario autenticado (últimos 50 logins exitosos).
+    /// </summary>
+    [Authorize]
+    [HttpGet("mis-accesos")]
+    public async Task<IActionResult> MisAccesos([FromQuery] int top = 50)
+    {
+        top = Math.Clamp(top, 1, 200);
+
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userId) || !Guid.TryParse(userId, out var userGuid))
+            return Unauthorized();
+
+        var logs = await _logRepo.GetAccesosByUsuarioAsync(userGuid, top);
+
+        var result = logs.Select(l => new AccesoDto(
+            Fecha: l.Fecha,
+            Tipo: l.TipoEvento.ToString(),
+            Exitoso: l.TipoEvento == TipoEventoLogActividad.Login,
+            Ip: l.Ip,
+            UserAgent: l.UserAgent
+        )).ToList();
+
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Historial completo de accesos (éxitos e intentos fallidos). Solo Admin.
+    /// </summary>
+    [Authorize(Roles = "Admin")]
+    [HttpGet("todos-los-accesos")]
+    public async Task<IActionResult> TodosLosAccesos(
+        [FromQuery] DateTime? desde,
+        [FromQuery] DateTime? hasta,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 50)
+    {
+        pageSize = Math.Clamp(pageSize, 1, 200);
+        page = Math.Max(1, page);
+
+        var desdeUtc = (desde ?? DateTime.UtcNow.AddDays(-30)).ToUniversalTime();
+        var hastaUtc = (hasta ?? DateTime.UtcNow).ToUniversalTime();
+
+        var skip = (page - 1) * pageSize;
+        var total = await _logRepo.CountTodosAccesosAsync(desdeUtc, hastaUtc);
+        var logs = await _logRepo.GetTodosAccesosAsync(desdeUtc, hastaUtc, skip, pageSize);
+
+        var items = logs.Select(l => new AccesoAdminDto(
+            Fecha: l.Fecha,
+            Email: l.Query ?? "Desconocido",
+            Tipo: l.TipoEvento.ToString(),
+            Exitoso: l.TipoEvento == TipoEventoLogActividad.Login,
+            Ip: l.Ip,
+            UserAgent: l.UserAgent
+        )).ToList();
+
+        return Ok(new AccesosPagedResult(total, page, pageSize, items));
     }
 
     // ── Helpers ─────────────────────────────────────────────

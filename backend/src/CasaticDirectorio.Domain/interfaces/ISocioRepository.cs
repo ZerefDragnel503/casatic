@@ -8,7 +8,8 @@ public interface ISocioRepository
     Task<Socio?> GetBySlugAsync(string slug);
     Task<(List<Socio> Items, int Total)> SearchAsync(
         string? query,
-        string? especialidad,
+        IEnumerable<string>? especialidades,
+        string? inicial,
         string? servicio,
         string? producto,
         string? sector,

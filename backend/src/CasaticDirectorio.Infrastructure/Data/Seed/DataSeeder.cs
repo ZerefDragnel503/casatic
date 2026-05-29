@@ -3,20 +3,16 @@ using CasaticDirectorio.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using System.Text.RegularExpressions;
 
 namespace CasaticDirectorio.Infrastructure.Data.Seed;
 
-/// <summary>
-/// Inicializa datos base del sistema:
-/// - Socio de prueba (sólo en primer arranque, si no hay socios)
-/// - Usuario admin (credenciales desde Seed:AdminEmail / Seed:AdminPassword)
-/// - Eventos de demostración
-/// </summary>
 public static class DataSeeder
 {
     public static async Task SeedAsync(AppDbContext db, IConfiguration config, ILogger logger)
     {
-        // ── 1. SOCIO DE PRUEBA ─────────────────────────────
+        await EnsureFacturasTableAsync(db);
+
         Socio? socioPrueba;
         if (!await db.Socios.AnyAsync())
         {
@@ -26,8 +22,8 @@ public static class DataSeeder
                 NombreEmpresa = "Empresa de Prueba",
                 Slug = "empresa-prueba",
                 Descripcion = "Empresa de prueba para validar el sistema.",
-                Especialidades = new List<string> { "Software", "Consultoría" },
-                Servicios = new List<string> { "Desarrollo", "Asesoría" },
+                Especialidades = new List<string> { "Software", "Consultoria" },
+                Servicios = new List<string> { "Desarrollo", "Asesoria" },
                 Habilitado = true,
                 EstadoFinanciero = EstadoFinanciero.AlDia
             };
@@ -37,10 +33,11 @@ public static class DataSeeder
         }
         else
         {
-            socioPrueba = await db.Socios.FirstAsync();
+            socioPrueba = await db.Socios
+                .OrderBy(s => s.NombreEmpresa)
+                .FirstAsync();
         }
 
-        // ── 2. USUARIOS ────────────────────────────────────
         if (!await db.Usuarios.AnyAsync())
         {
             var adminEmail = config["Seed:AdminEmail"] ?? "admin@casatic.org";
@@ -49,7 +46,7 @@ public static class DataSeeder
             if (string.IsNullOrWhiteSpace(adminPassword))
             {
                 throw new InvalidOperationException(
-                    "Seed:AdminPassword no está configurada. Definí SEED_ADMIN_PASSWORD en .env " +
+                    "Seed:AdminPassword no esta configurada. Defini SEED_ADMIN_PASSWORD en .env " +
                     "para crear el usuario administrador inicial.");
             }
 
@@ -60,7 +57,7 @@ public static class DataSeeder
                     Email = adminEmail,
                     PasswordHash = BCrypt.Net.BCrypt.HashPassword(adminPassword),
                     Rol = Rol.Admin,
-                    PrimerLogin = true, // ← antes false. Forzamos cambio de contraseña en primer login.
+                    PrimerLogin = true,
                     Activo = true,
                     SocioId = null
                 },
@@ -79,11 +76,10 @@ public static class DataSeeder
             await db.SaveChangesAsync();
 
             logger.LogInformation(
-                "Usuario admin creado: {Email}. Cambiá la contraseña en el primer login.",
+                "Usuario admin creado: {Email}. Cambia la contrasena en el primer login.",
                 adminEmail);
         }
 
-        // ── 3. EVENTOS DE PRUEBA ───────────────────────────
         if (!await db.Eventos.AnyAsync())
         {
             db.Eventos.AddRange(
@@ -91,9 +87,9 @@ public static class DataSeeder
                 {
                     Id = Guid.NewGuid(),
                     SocioId = socioPrueba.Id,
-                    Titulo = "Conferencia de Innovación CASATIC",
+                    Titulo = "Conferencia de Innovacion CASATIC",
                     Slug = "conferencia-innovacion-casatic",
-                    Descripcion = "Evento enfocado en transformación digital, innovación y tecnología empresarial.",
+                    Descripcion = "Evento enfocado en transformacion digital, innovacion y tecnologia empresarial.",
                     Tipo = TipoEvento.Conferencia,
                     Modalidad = ModalidadEvento.Presencial,
                     FechaInicio = DateTime.UtcNow.AddDays(10),
@@ -111,7 +107,7 @@ public static class DataSeeder
                     SocioId = socioPrueba.Id,
                     Titulo = "Webinar de Ciberseguridad Empresarial",
                     Slug = "webinar-ciberseguridad-empresarial",
-                    Descripcion = "Buenas prácticas de seguridad informática para empresas.",
+                    Descripcion = "Buenas practicas de seguridad informatica para empresas.",
                     Tipo = TipoEvento.Webinar,
                     Modalidad = ModalidadEvento.Virtual,
                     FechaInicio = DateTime.UtcNow.AddDays(5),
@@ -127,5 +123,122 @@ public static class DataSeeder
 
             await db.SaveChangesAsync();
         }
+
+        await EnsureFacturasParaSociosAsync(db, logger);
+    }
+
+    private static async Task EnsureFacturasTableAsync(AppDbContext db)
+    {
+        await db.Database.ExecuteSqlRawAsync("""
+            CREATE TABLE IF NOT EXISTS facturas (
+                "Id" UUID NOT NULL DEFAULT gen_random_uuid(),
+                "SocioId" UUID NOT NULL,
+                "Numero" VARCHAR(40) NOT NULL,
+                "TipoDocumento" VARCHAR(60) NOT NULL DEFAULT 'Factura interna',
+                "CodigoGeneracion" VARCHAR(40) NOT NULL DEFAULT '',
+                "NumeroControl" VARCHAR(60) NOT NULL DEFAULT '',
+                "SelloRecepcion" VARCHAR(120) NOT NULL DEFAULT '',
+                "Ambiente" VARCHAR(30) NOT NULL DEFAULT 'Produccion',
+                "CondicionOperacion" VARCHAR(30) NOT NULL DEFAULT 'Credito',
+                "FormaPago" VARCHAR(60) NOT NULL DEFAULT 'Transferencia',
+                "ReferenciaPago" VARCHAR(120) NOT NULL DEFAULT '',
+                "PlanNombre" VARCHAR(120) NOT NULL,
+                "PlanPeriodo" VARCHAR(40) NOT NULL,
+                "Descripcion" TEXT NOT NULL,
+                "Subtotal" NUMERIC(12,2) NOT NULL,
+                "Iva" NUMERIC(12,2) NOT NULL,
+                "Total" NUMERIC(12,2) NOT NULL,
+                "Estado" VARCHAR(20) NOT NULL DEFAULT 'Pendiente',
+                "FechaEmision" TIMESTAMPTZ NOT NULL DEFAULT now(),
+                "FechaVencimiento" TIMESTAMPTZ NOT NULL,
+                "FechaPago" TIMESTAMPTZ DEFAULT NULL,
+                "Notas" TEXT NOT NULL DEFAULT '',
+                "CreatedAt" TIMESTAMPTZ NOT NULL DEFAULT now(),
+                "UpdatedAt" TIMESTAMPTZ NOT NULL DEFAULT now(),
+                CONSTRAINT pk_facturas PRIMARY KEY ("Id"),
+                CONSTRAINT fk_facturas_socios FOREIGN KEY ("SocioId")
+                    REFERENCES socios("Id") ON DELETE CASCADE
+            );
+
+            CREATE UNIQUE INDEX IF NOT EXISTS ix_facturas_numero ON facturas("Numero");
+            CREATE UNIQUE INDEX IF NOT EXISTS ix_facturas_socio_id ON facturas("SocioId");
+            CREATE INDEX IF NOT EXISTS ix_facturas_estado ON facturas("Estado");
+            CREATE INDEX IF NOT EXISTS ix_facturas_fecha_vencimiento ON facturas("FechaVencimiento");
+            """);
+
+        await db.Database.ExecuteSqlRawAsync("""
+            ALTER TABLE facturas ADD COLUMN IF NOT EXISTS "TipoDocumento" VARCHAR(60) NOT NULL DEFAULT 'Factura interna';
+            ALTER TABLE facturas ADD COLUMN IF NOT EXISTS "CodigoGeneracion" VARCHAR(40) NOT NULL DEFAULT '';
+            ALTER TABLE facturas ADD COLUMN IF NOT EXISTS "NumeroControl" VARCHAR(60) NOT NULL DEFAULT '';
+            ALTER TABLE facturas ADD COLUMN IF NOT EXISTS "SelloRecepcion" VARCHAR(120) NOT NULL DEFAULT '';
+            ALTER TABLE facturas ADD COLUMN IF NOT EXISTS "Ambiente" VARCHAR(30) NOT NULL DEFAULT 'Produccion';
+            ALTER TABLE facturas ADD COLUMN IF NOT EXISTS "CondicionOperacion" VARCHAR(30) NOT NULL DEFAULT 'Credito';
+            ALTER TABLE facturas ADD COLUMN IF NOT EXISTS "FormaPago" VARCHAR(60) NOT NULL DEFAULT 'Transferencia';
+            ALTER TABLE facturas ADD COLUMN IF NOT EXISTS "ReferenciaPago" VARCHAR(120) NOT NULL DEFAULT '';
+            UPDATE facturas
+            SET "CodigoGeneracion" = lower("Id"::text)
+            WHERE coalesce("CodigoGeneracion", '') = '';
+            UPDATE facturas
+            SET "NumeroControl" = 'DTE-01-CASATIC-' || replace("Numero", 'CAS-', '')
+            WHERE coalesce("NumeroControl", '') = '';
+            """);
+    }
+
+    private static async Task EnsureFacturasParaSociosAsync(AppDbContext db, ILogger logger)
+    {
+        var sociosSinFactura = await db.Socios
+            .Where(s => !db.Facturas.Any(f => f.SocioId == s.Id))
+            .OrderBy(s => s.NombreEmpresa)
+            .ToListAsync();
+
+        if (sociosSinFactura.Count == 0)
+            return;
+
+        var year = DateTime.UtcNow.Year;
+        var lastNumero = await db.Facturas
+            .Where(f => f.FechaEmision.Year == year && EF.Functions.ILike(f.Numero, $"CAS-{year}-%"))
+            .OrderByDescending(f => f.Numero)
+            .Select(f => f.Numero)
+            .FirstOrDefaultAsync();
+
+        var correlativo = 1;
+        if (!string.IsNullOrWhiteSpace(lastNumero))
+        {
+            var match = Regex.Match(lastNumero, $"^CAS-{year}-(\\d{{4}})$");
+            if (match.Success && int.TryParse(match.Groups[1].Value, out var valor))
+            {
+                correlativo = valor + 1;
+            }
+        }
+
+        foreach (var socio in sociosSinFactura)
+        {
+            const decimal subtotal = 400m;
+            var iva = Math.Round(subtotal * 0.13m, 2);
+
+            db.Facturas.Add(new Factura
+            {
+                Id = Guid.NewGuid(),
+                SocioId = socio.Id,
+                Numero = $"CAS-{year}-{correlativo:0000}",
+                CodigoGeneracion = Guid.NewGuid().ToString().ToUpperInvariant(),
+                NumeroControl = $"DTE-01-CASATIC-{year}-{correlativo:0000}",
+                PlanNombre = "Socios Miembros",
+                PlanPeriodo = "anual",
+                Descripcion = "Membresia anual CASATIC - Socios Miembros",
+                Subtotal = subtotal,
+                Iva = iva,
+                Total = subtotal + iva,
+                Estado = EstadoFactura.Pendiente,
+                FechaEmision = DateTime.UtcNow,
+                FechaVencimiento = DateTime.UtcNow.AddDays(30),
+                Notas = "Factura generada automaticamente desde el plan de membresia publicado en el home."
+            });
+
+            correlativo++;
+        }
+
+        await db.SaveChangesAsync();
+        logger.LogInformation("Facturas iniciales generadas: {Count}", sociosSinFactura.Count);
     }
 }

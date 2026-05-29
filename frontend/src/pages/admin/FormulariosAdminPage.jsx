@@ -143,11 +143,12 @@ export default function FormulariosAdminPage() {
   const filtered = items
     .filter((f) => {
       const q = search.toLowerCase();
+      const companyName = (f.nombreEmpresa ?? f.NombreEmpresa ?? '').toLowerCase();
       return (
         !q ||
         f.nombre?.toLowerCase().includes(q) ||
         f.correo?.toLowerCase().includes(q) ||
-        f.nombreEmpresa?.toLowerCase().includes(q) ||
+        companyName.includes(q) ||
         f.mensaje?.toLowerCase().includes(q)
       );
     })

@@ -5,10 +5,29 @@ import {
   AlertCircle, Loader2, Calendar, Building2, Activity,
   ArrowUpRight, ArrowDownRight, Eye, Clock, Download, Upload,
   ChevronDown, RefreshCw, FileText, UserCheck, UserX,
-  CheckCircle2, XCircle, FileSpreadsheet
+  CheckCircle2, XCircle, FileSpreadsheet, Shield, ShieldAlert,
+  ChevronLeft, ChevronRight, Globe, LogIn
 } from 'lucide-react';
 
 /* ─── Helpers ────────────────────────────────────────────── */
+function extractBrowser(ua) {
+  if (!ua) return '—';
+  if (ua.includes('Edg/') || ua.includes('Edge/')) return 'Edge';
+  if (ua.includes('Chrome/')) return 'Chrome';
+  if (ua.includes('Firefox/')) return 'Firefox';
+  if (ua.includes('Safari/') && !ua.includes('Chrome')) return 'Safari';
+  if (ua.toLowerCase().includes('curl')) return 'curl';
+  if (ua.toLowerCase().includes('postman')) return 'Postman';
+  return ua.slice(0, 28) + '…';
+}
+
+function formatFecha(iso) {
+  return new Date(iso).toLocaleString('es-SV', {
+    day: '2-digit', month: 'short', year: 'numeric',
+    hour: '2-digit', minute: '2-digit',
+  });
+}
+
 function pct(current, previous) {
   if (!previous) return current > 0 ? 100 : 0;
   return Math.round(((current - previous) / previous) * 100);
@@ -267,6 +286,11 @@ export default function ReportesPage() {
   const [error, setError] = useState(null);
   const [tab, setTab] = useState('general');
   const [refreshing, setRefreshing] = useState(false);
+  const [accesos, setAccesos] = useState([]);
+  const [accesosTotal, setAccesosTotal] = useState(0);
+  const [accesosPage, setAccesosPage] = useState(1);
+  const [accesosLoading, setAccesosLoading] = useState(false);
+  const ACCESOS_PAGE_SIZE = 20;
   const [exporting, setExporting] = useState(false);
   const [importModal, setImportModal] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -339,7 +363,24 @@ export default function ReportesPage() {
     }
   };
 
+  const cargarAccesos = async (page = 1) => {
+    setAccesosLoading(true);
+    try {
+      const res = await api.get('/auth/todos-los-accesos', {
+        params: { page, pageSize: ACCESOS_PAGE_SIZE },
+      });
+      setAccesos(res.data.items);
+      setAccesosTotal(res.data.total);
+      setAccesosPage(res.data.page);
+    } catch {
+      setAccesos([]);
+    } finally {
+      setAccesosLoading(false);
+    }
+  };
+
   useEffect(() => { cargar(); }, []);
+  useEffect(() => { if (tab === 'accesos') cargarAccesos(1); }, [tab]);
 
   /* ── Computed values ── */
   const visitasTotal = useMemo(() =>
@@ -731,36 +772,138 @@ export default function ReportesPage() {
       )}
 
       {/* ═══ TAB: ACCESOS ══════════════════════════════ */}
-      {tab === 'accesos' && (
-        <Panel
-          title="Actividad de acceso"
-          subtitle="Logins por usuario · Últimos 30 días"
-          icon={Activity}
-        >
-          {!dashboard.loginsPorUsuario || Object.keys(dashboard.loginsPorUsuario).length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-14 text-surface-400">
-              <div className="w-12 h-12 bg-surface-50 rounded-2xl flex items-center justify-center mb-3">
-                <Activity size={22} className="opacity-50" />
+      {tab === 'accesos' && (() => {
+        const exitosos = accesos.filter(a => a.exitoso).length;
+        const fallidos = accesos.filter(a => !a.exitoso).length;
+        const totalPages = Math.ceil(accesosTotal / ACCESOS_PAGE_SIZE);
+
+        return (
+          <div className="space-y-4">
+            {/* KPI chips */}
+            <div className="flex flex-wrap gap-3">
+              <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-100 text-emerald-700 text-sm font-medium px-4 py-2 rounded-xl">
+                <Shield size={15} />
+                <span>{accesosTotal} registros totales</span>
               </div>
-              <p className="text-sm">Sin accesos registrados en este período</p>
+              <div className="flex items-center gap-2 bg-casatic-50 border border-casatic-100 text-casatic-700 text-sm font-medium px-4 py-2 rounded-xl">
+                <LogIn size={15} />
+                <span>{exitosos} exitosos en esta página</span>
+              </div>
+              <div className="flex items-center gap-2 bg-red-50 border border-red-100 text-red-700 text-sm font-medium px-4 py-2 rounded-xl">
+                <ShieldAlert size={15} />
+                <span>{fallidos} fallidos en esta página</span>
+              </div>
             </div>
-          ) : (
-            <div className="divide-y divide-surface-50 py-2">
-              {Object.entries(dashboard.loginsPorUsuario)
-                .sort(([, a], [, b]) => b - a)
-                .map(([email, count]) => (
-                  <LoginBar
-                    key={email}
-                    email={email}
-                    count={count}
-                    maxCount={Math.max(...Object.values(dashboard.loginsPorUsuario))}
-                  />
-                ))
+
+            <Panel
+              title="Historial de accesos"
+              subtitle="Logins exitosos e intentos fallidos · Últimos 30 días"
+              icon={Activity}
+              actions={
+                <button
+                  onClick={() => cargarAccesos(accesosPage)}
+                  disabled={accesosLoading}
+                  className="btn-ghost btn-sm"
+                >
+                  <RefreshCw size={13} className={accesosLoading ? 'animate-spin' : ''} />
+                </button>
               }
-            </div>
-          )}
-        </Panel>
-      )}
+            >
+              {accesosLoading ? (
+                <div className="flex items-center justify-center py-14 gap-2 text-surface-400">
+                  <Loader2 size={18} className="animate-spin" />
+                  <span className="text-sm">Cargando accesos…</span>
+                </div>
+              ) : accesos.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-14 text-surface-400">
+                  <div className="w-12 h-12 bg-surface-50 rounded-2xl flex items-center justify-center mb-3">
+                    <Activity size={22} className="opacity-50" />
+                  </div>
+                  <p className="text-sm">Sin accesos registrados</p>
+                </div>
+              ) : (
+                <>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="bg-surface-50/80">
+                          <th className="text-left px-5 py-3 text-xs font-semibold text-surface-500 uppercase tracking-wider">Resultado</th>
+                          <th className="text-left px-5 py-3 text-xs font-semibold text-surface-500 uppercase tracking-wider">Email</th>
+                          <th className="text-left px-5 py-3 text-xs font-semibold text-surface-500 uppercase tracking-wider">Fecha y hora</th>
+                          <th className="text-left px-5 py-3 text-xs font-semibold text-surface-500 uppercase tracking-wider">IP</th>
+                          <th className="text-left px-5 py-3 text-xs font-semibold text-surface-500 uppercase tracking-wider">Navegador</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-surface-50">
+                        {accesos.map((a, i) => (
+                          <tr key={i} className="hover:bg-casatic-50/30 transition-colors">
+                            <td className="px-5 py-3.5">
+                              {a.exitoso ? (
+                                <span className="inline-flex items-center gap-1.5 text-xs font-semibold bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-full">
+                                  <Shield size={11} /> Exitoso
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1.5 text-xs font-semibold bg-red-50 text-red-600 px-2.5 py-1 rounded-full">
+                                  <ShieldAlert size={11} /> Fallido
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-5 py-3.5">
+                              <span className="font-medium text-surface-800">{a.email || '—'}</span>
+                            </td>
+                            <td className="px-5 py-3.5">
+                              <span className="text-surface-500 flex items-center gap-1.5 whitespace-nowrap">
+                                <Clock size={12} className="text-surface-300" />
+                                {formatFecha(a.fecha)}
+                              </span>
+                            </td>
+                            <td className="px-5 py-3.5">
+                              <span className="font-mono text-xs text-surface-400 bg-surface-50 px-2 py-0.5 rounded">
+                                {a.ip || '—'}
+                              </span>
+                            </td>
+                            <td className="px-5 py-3.5">
+                              <span className="flex items-center gap-1.5 text-surface-500">
+                                <Globe size={12} className="text-surface-300 flex-shrink-0" />
+                                <span className="text-xs" title={a.userAgent}>{extractBrowser(a.userAgent)}</span>
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Pagination */}
+                  {totalPages > 1 && (
+                    <div className="flex items-center justify-between px-5 py-3 border-t border-surface-100">
+                      <span className="text-xs text-surface-400">
+                        Página {accesosPage} de {totalPages} · {accesosTotal} registros totales
+                      </span>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => cargarAccesos(accesosPage - 1)}
+                          disabled={accesosPage <= 1 || accesosLoading}
+                          className="btn-ghost btn-sm px-2 disabled:opacity-40"
+                        >
+                          <ChevronLeft size={15} />
+                        </button>
+                        <button
+                          onClick={() => cargarAccesos(accesosPage + 1)}
+                          disabled={accesosPage >= totalPages || accesosLoading}
+                          className="btn-ghost btn-sm px-2 disabled:opacity-40"
+                        >
+                          <ChevronRight size={15} />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </Panel>
+          </div>
+        );
+      })()}
 
       {/* ── Footer note ────────────────────────────────── */}
       <p className="text-center text-xs text-surface-300 pb-4">

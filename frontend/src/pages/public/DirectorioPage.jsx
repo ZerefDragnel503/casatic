@@ -7,6 +7,9 @@ import {
   ArrowRight, MapPin, X, Users, BarChart3, ShieldCheck
 } from 'lucide-react';
 import casaticLogo from '../../img/Reverse - v2@4x.png';
+import CompanyFilters from '../../components/filters/CompanyFilters';
+
+const LETTERS = ['Todos', '0-9', ...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')];
 
 function CardSkeleton() {
   return (
@@ -33,7 +36,8 @@ export default function DirectorioPage() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [query, setQuery] = useState('');
-  const [especialidad, setEspecialidad] = useState('');
+  const [selectedEspecialidades, setSelectedEspecialidades] = useState([]);
+  const [letter, setLetter] = useState('Todos');
   const [servicio, setServicio] = useState('');
   const [especialidades, setEspecialidades] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -51,17 +55,32 @@ export default function DirectorioPage() {
     setLoading(true);
     const params = { page, pageSize };
     if (debouncedQuery) params.query = debouncedQuery;
-    if (especialidad) params.especialidad = especialidad;
+    if (selectedEspecialidades.length > 0) params.especialidad = selectedEspecialidades.join(',');
+    if (letter !== 'Todos') params.inicial = letter;
     if (debouncedServicio) params.servicio = debouncedServicio;
     api.get('/directorio', { params })
       .then((res) => { setSocios(res.data.items); setTotal(res.data.total); setTotalPages(res.data.totalPages); })
       .catch(() => setSocios([]))
       .finally(() => setLoading(false));
-  }, [page, debouncedQuery, especialidad, debouncedServicio]);
+  }, [page, debouncedQuery, selectedEspecialidades, letter, debouncedServicio]);
 
   const handleSearch = (e) => { e.preventDefault(); setPage(1); };
-  const clearFilters = () => { setQuery(''); setEspecialidad(''); setServicio(''); setPage(1); };
-  const hasFilters = query || especialidad || servicio;
+  const clearFilters = () => {
+    setQuery('');
+    setSelectedEspecialidades([]);
+    setLetter('Todos');
+    setServicio('');
+    setPage(1);
+  };
+  const toggleEspecialidad = (value) => {
+    setSelectedEspecialidades((current) =>
+      current.includes(value)
+        ? current.filter((item) => item !== value)
+        : [...current, value]
+    );
+    setPage(1);
+  };
+  const hasFilters = query || selectedEspecialidades.length > 0 || letter !== 'Todos' || servicio;
 
   return (
     <div className="bg-white overflow-x-hidden min-h-screen">
@@ -123,9 +142,27 @@ export default function DirectorioPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 pb-16">
 
           {/* ── Search Bar ───────────────────────────────── */}
+          <CompanyFilters
+            search={query}
+            onSearchChange={(value) => { setQuery(value); setPage(1); }}
+            searchPlaceholder="Buscar por nombre, descripcion o tecnologia..."
+            letter={letter}
+            onLetterChange={(value) => { setLetter(value); setPage(1); }}
+            especialidades={especialidades}
+            selectedEspecialidades={selectedEspecialidades}
+            onToggleEspecialidad={toggleEspecialidad}
+            onClearEspecialidades={() => { setSelectedEspecialidades([]); setPage(1); }}
+            service={servicio}
+            onServiceChange={(value) => { setServicio(value); setPage(1); }}
+            showService
+            onClearAll={clearFilters}
+            resultCount={total}
+            className="mb-8 animate-fade-in-up"
+          />
+
           <form
             onSubmit={handleSearch}
-            className="bg-white rounded-2xl shadow-elevated p-4 mb-8 flex flex-col md:flex-row gap-3 animate-fade-in-up"
+            className="hidden"
             style={{ animationDelay: '0.15s' }}
           >
             <div className="flex-1 relative">
@@ -138,18 +175,13 @@ export default function DirectorioPage() {
                 className="input-field pl-10"
               />
             </div>
-            <div className="relative min-w-[200px]">
+            <div className="relative min-w-[220px]">
               <SlidersHorizontal size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-surface-400" />
-              <select
-                value={especialidad}
-                onChange={(e) => { setEspecialidad(e.target.value); setPage(1); }}
-                className="input-field pl-10 pr-8 appearance-none cursor-pointer"
-              >
-                <option value="">Todas las especialidades</option>
-                {especialidades.map((esp) => (
-                  <option key={esp} value={esp}>{esp}</option>
-                ))}
-              </select>
+              <div className="input-field pl-10 pr-3 flex items-center text-sm text-surface-600">
+                {selectedEspecialidades.length === 0
+                  ? 'Todas las especialidades'
+                  : `${selectedEspecialidades.length} especialidad${selectedEspecialidades.length > 1 ? 'es' : ''}`}
+              </div>
             </div>
             <div className="relative min-w-[180px]">
               <input
@@ -167,6 +199,56 @@ export default function DirectorioPage() {
             )}
           </form>
 
+          <div className="hidden">
+            <div className="flex flex-wrap gap-1.5">
+              {LETTERS.map((item) => (
+                <button
+                  key={item}
+                  onClick={() => { setLetter(item); setPage(1); }}
+                  className={`h-8 min-w-8 px-2 rounded-lg border text-xs font-bold transition-colors ${
+                    letter === item
+                      ? 'bg-casatic-600 text-white border-casatic-600'
+                      : 'bg-white text-surface-600 border-surface-200 hover:border-casatic-300 hover:text-casatic-700'
+                  }`}
+                >
+                  {item}
+                </button>
+              ))}
+            </div>
+
+            <div className="bg-white rounded-2xl shadow-card border border-surface-100 p-4">
+              <div className="flex items-center justify-between gap-3 mb-3">
+                <p className="text-xs font-bold uppercase tracking-wide text-surface-500">Filtrar por especialidades</p>
+                {selectedEspecialidades.length > 0 && (
+                  <button
+                    onClick={() => { setSelectedEspecialidades([]); setPage(1); }}
+                    className="text-xs font-semibold text-casatic-600"
+                  >
+                    Limpiar especialidades
+                  </button>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
+                {especialidades.map((esp) => {
+                  const active = selectedEspecialidades.includes(esp);
+                  return (
+                    <button
+                      key={esp}
+                      onClick={() => toggleEspecialidad(esp)}
+                      className={`px-3 py-1.5 rounded-full border text-xs font-semibold transition-colors ${
+                        active
+                          ? 'bg-casatic-600 text-white border-casatic-600'
+                          : 'bg-white text-surface-600 border-surface-200 hover:border-casatic-300'
+                      }`}
+                    >
+                      {esp}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
           {/* ── Results Info ──────────────────────────────── */}
           <div className="flex items-center justify-between mb-6">
             <p className="text-sm text-surface-500">
@@ -179,7 +261,8 @@ export default function DirectorioPage() {
             {hasFilters && !loading && (
               <div className="flex flex-wrap items-center gap-2">
                 {query && <span className="badge-primary">&ldquo;{query}&rdquo;</span>}
-                {especialidad && <span className="badge-primary">{especialidad}</span>}
+                {letter !== 'Todos' && <span className="badge-primary">Letra: {letter}</span>}
+                {selectedEspecialidades.map((esp) => <span key={esp} className="badge-primary">{esp}</span>)}
                 {servicio && <span className="badge-primary">Servicio: {servicio}</span>}
               </div>
             )}

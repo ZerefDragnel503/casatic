@@ -17,6 +17,7 @@ public class AppDbContext : DbContext
     public DbSet<LogActividad> LogsActividad => Set<LogActividad>();
     public DbSet<FormularioContacto> FormulariosContacto => Set<FormularioContacto>();
     public DbSet<Evento> Eventos => Set<Evento>();
+    public DbSet<Factura> Facturas => Set<Factura>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -155,8 +156,7 @@ public class AppDbContext : DbContext
 
     e.Property(x => x.Estado)
         .HasConversion<string>()
-        .HasMaxLength(20)
-        .HasDefaultValueSql("'Pendiente'");
+        .HasMaxLength(20);
 
     e.Property(x => x.Habilitado)
         .HasDefaultValue(true);
@@ -186,6 +186,47 @@ public class AppDbContext : DbContext
     e.HasIndex(x => x.Estado);
     e.HasIndex(x => x.Destacado);
 });
+
+        modelBuilder.Entity<Factura>(e =>
+        {
+            e.ToTable("facturas");
+
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasDefaultValueSql("gen_random_uuid()");
+            e.Property(x => x.Numero).HasMaxLength(40).IsRequired();
+            e.HasIndex(x => x.Numero).IsUnique();
+
+            e.Property(x => x.TipoDocumento).HasMaxLength(60).HasDefaultValue("Factura interna");
+            e.Property(x => x.CodigoGeneracion).HasMaxLength(40).HasDefaultValue("");
+            e.Property(x => x.NumeroControl).HasMaxLength(60).HasDefaultValue("");
+            e.Property(x => x.SelloRecepcion).HasMaxLength(120).HasDefaultValue("");
+            e.Property(x => x.Ambiente).HasMaxLength(30).HasDefaultValue("Produccion");
+            e.Property(x => x.CondicionOperacion).HasMaxLength(30).HasDefaultValue("Credito");
+            e.Property(x => x.FormaPago).HasMaxLength(60).HasDefaultValue("Transferencia");
+            e.Property(x => x.ReferenciaPago).HasMaxLength(120).HasDefaultValue("");
+            e.Property(x => x.PlanNombre).HasMaxLength(120).IsRequired();
+            e.Property(x => x.PlanPeriodo).HasMaxLength(40).IsRequired();
+            e.Property(x => x.Descripcion).HasColumnType("text").IsRequired();
+            e.Property(x => x.Subtotal).HasColumnType("numeric(12,2)");
+            e.Property(x => x.Iva).HasColumnType("numeric(12,2)");
+            e.Property(x => x.Total).HasColumnType("numeric(12,2)");
+            e.Property(x => x.Estado).HasConversion<string>().HasMaxLength(20);
+            e.Property(x => x.FechaEmision).HasColumnType("timestamp with time zone").HasDefaultValueSql("now()");
+            e.Property(x => x.FechaVencimiento).HasColumnType("timestamp with time zone");
+            e.Property(x => x.FechaPago).HasColumnType("timestamp with time zone");
+            e.Property(x => x.Notas).HasColumnType("text");
+            e.Property(x => x.CreatedAt).HasDefaultValueSql("now()");
+            e.Property(x => x.UpdatedAt).HasDefaultValueSql("now()");
+
+            e.HasOne(x => x.Socio)
+                .WithOne(s => s.Factura)
+                .HasForeignKey<Factura>(x => x.SocioId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasIndex(x => x.SocioId).IsUnique();
+            e.HasIndex(x => x.Estado);
+            e.HasIndex(x => x.FechaVencimiento);
+        });
     }
 }
 

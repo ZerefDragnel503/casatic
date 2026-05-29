@@ -34,14 +34,8 @@ public class FormularioContactoController : ControllerBase
     /// Enviar formulario de contacto a un socio.
     /// POST /api/formulariocontacto/{socioId}
     /// </summary>
-    [HttpPost("{socioId:guid}")]
-    [EnableRateLimiting("contacto")]
-    public async Task<IActionResult> Enviar(Guid socioId, [FromBody] FormularioContactoDto dto)
+    private async Task<IActionResult> EnviarFormularioAsync(Guid socioId, FormularioContactoDto dto)
     {
-        var socio = await _socios.GetByIdAsync(socioId);
-        if (socio == null || !socio.Habilitado)
-            return NotFound(new { message = "Socio no encontrado o deshabilitado" });
-
         var formulario = new FormularioContacto
         {
             Id = Guid.NewGuid(),
@@ -64,6 +58,56 @@ public class FormularioContactoController : ControllerBase
         return Ok(new { message = "Formulario enviado con éxito", id = formulario.Id });
     }
 
+    [HttpPost("{socioId:guid}")]
+    [EnableRateLimiting("contacto")]
+    public async Task<IActionResult> Enviar(Guid socioId, [FromBody] FormularioContactoDto dto)
+    {
+        var socio = await _socios.GetByIdAsync(socioId);
+        if (socio == null || !socio.Habilitado)
+            return NotFound(new { message = "Socio no encontrado o deshabilitado" });
+
+        return await EnviarFormularioAsync(socioId, dto);
+    }
+
+    [HttpPost("slug/{slug}")]
+    [EnableRateLimiting("contacto")]
+    public async Task<IActionResult> EnviarPorSlug(string slug, [FromBody] FormularioContactoDto dto)
+    {
+        var socio = await _socios.GetBySlugAsync(slug);
+        if (socio == null || !socio.Habilitado)
+            return NotFound(new { message = "Socio no encontrado o deshabilitado" });
+
+        return await EnviarFormularioAsync(socio.Id, dto);
+    }
+
+    /// <summary>
+    /// Enviar formulario de contacto general desde /contacto.
+    /// POST /api/formulariocontacto/general
+    /// </summary>
+    [HttpPost("general")]
+    [EnableRateLimiting("contacto")]
+    public async Task<IActionResult> EnviarGeneral([FromBody] FormularioContactoDto dto)
+    {
+        var socioReceptor = (await _socios.GetAllAsync())
+            .FirstOrDefault(s => s.Habilitado);
+
+        if (socioReceptor == null)
+            return BadRequest(new { message = "No hay un socio habilitado para recibir mensajes generales" });
+
+        var asunto = string.IsNullOrWhiteSpace(dto.Asunto)
+            ? "Sin asunto"
+            : dto.Asunto.Trim();
+
+        var dtoGeneral = new FormularioContactoDto
+        {
+            Nombre = dto.Nombre,
+            Correo = dto.Correo,
+            Mensaje = $"[Contacto general]\nAsunto: {asunto}\n\n{dto.Mensaje}"
+        };
+
+        return await EnviarFormularioAsync(socioReceptor.Id, dtoGeneral);
+    }
+
     /// <summary>
     /// Listar TODOS los formularios de contacto recibidos (admin).
     /// GET /api/formulariocontacto?desde=...&amp;hasta=...
@@ -74,8 +118,8 @@ public class FormularioContactoController : ControllerBase
     {
         var ahora = DateTime.UtcNow;
         var formularios = await _formularios.GetAllAsync(
-            desde ?? ahora.AddMonths(-1),
-            hasta ?? ahora.AddDays(1));
+            EnsureUtc(desde ?? ahora.AddMonths(-1)),
+            EnsureUtc(hasta ?? ahora.AddDays(1)));
 
         return Ok(formularios.Select(f => new
         {
@@ -116,12 +160,14 @@ public class FormularioContactoController : ControllerBase
             return BadRequest(new { message = "No se pudo obtener el ID de tu empresa del token" });
 
         var ahora = DateTime.UtcNow;
+        var fechaDesde = EnsureUtc(desde ?? ahora.AddMonths(-1));
+        var fechaHasta = EnsureUtc(hasta ?? ahora.AddDays(1));
         var formularios = await _formularios.GetBySocioAsync(socioId);
         
         // Filtrar por rango de fechas si se proporciona
         var filtrados = formularios
-            .Where(f => f.Fecha >= (desde ?? ahora.AddMonths(-1)))
-            .Where(f => f.Fecha <= (hasta ?? ahora.AddDays(1)))
+            .Where(f => f.Fecha >= fechaDesde)
+            .Where(f => f.Fecha <= fechaHasta)
             .ToList();
 
         return Ok(filtrados.Select(f => new
@@ -153,4 +199,12 @@ public class FormularioContactoController : ControllerBase
             f.Fecha
         }));
     }
+
+    private static DateTime EnsureUtc(DateTime value) =>
+        value.Kind switch
+        {
+            DateTimeKind.Utc => value,
+            DateTimeKind.Local => value.ToUniversalTime(),
+            _ => DateTime.SpecifyKind(value, DateTimeKind.Utc)
+        };
 }

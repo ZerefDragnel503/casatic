@@ -42,6 +42,23 @@ public class EventosController : ControllerBase
     }
 
     /// <summary>
+    /// Todos los eventos para el panel admin/socio.
+    /// Admin ve todos; Socio ve solo los de su empresa.
+    /// </summary>
+    [HttpGet]
+    [Authorize(Roles = "Admin,Socio")]
+    public async Task<IActionResult> GetAll()
+    {
+        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var rolClaim = User.FindFirstValue(ClaimTypes.Role) ?? "Socio";
+        Guid.TryParse(userIdClaim, out var userId);
+        Enum.TryParse<Rol>(rolClaim, true, out var rol);
+
+        var eventos = await _service.GetAllAsync(userId, rol);
+        return Ok(eventos);
+    }
+
+    /// <summary>
     /// Próximos eventos publicados (público).
     /// </summary>
     [HttpGet("proximos")]
@@ -73,5 +90,27 @@ public class EventosController : ControllerBase
     {
         await _service.AprobarEventoAsync(id);
         return Ok(new { message = "Evento aprobado exitosamente" });
+    }
+
+    /// <summary>
+    /// Rechazar un evento (admin).
+    /// </summary>
+    [HttpPut("{id:guid}/rechazar")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> Rechazar(Guid id)
+    {
+        await _service.RechazarEventoAsync(id);
+        return Ok(new { message = "Evento rechazado exitosamente" });
+    }
+
+    /// <summary>
+    /// Eliminar un evento (admin).
+    /// </summary>
+    [HttpDelete("{id:guid}")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> Delete(Guid id)
+    {
+        await _service.DeleteAsync(id);
+        return Ok(new { message = "Evento eliminado exitosamente" });
     }
 }
