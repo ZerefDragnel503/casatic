@@ -34,6 +34,7 @@ public class AuthController : ControllerBase
     private readonly ILogActividadRepository _logRepo;
     private readonly IWebHostEnvironment _env;
     private readonly ILogger<AuthController> _logger;
+    private readonly IEmailService _emailService;
 
     public AuthController(
         IUsuarioRepository usuarios,
@@ -41,6 +42,7 @@ public class AuthController : ControllerBase
         ILogService logService,
         ILogActividadRepository logRepo,
         IWebHostEnvironment env,
+        IEmailService emailService,
         ILogger<AuthController> logger)
     {
         _usuarios = usuarios;
@@ -48,6 +50,7 @@ public class AuthController : ControllerBase
         _logService = logService;
         _logRepo = logRepo;
         _env = env;
+        _emailService = emailService;
         _logger = logger;
     }
 
@@ -212,8 +215,18 @@ public class AuthController : ControllerBase
             usuarioId: usuario.Id,
             ip: HttpContext.Connection.RemoteIpAddress?.ToString());
 
-        // En Development devolvemos el token para que sea testeable sin servicio de email.
-        // TODO PRODUCCIÓN: integrar servicio de email (SendGrid, SES, SMTP) y NUNCA devolver el token aquí.
+        var recoveryUrl = $"{Request.Scheme}://{Request.Host}/admin/forgot-password";
+        var emailBody = $@"<p>Se solicitó recuperación de contraseña para esta cuenta.</p>
+<p>Usa el siguiente código en la pantalla de recuperación:</p>
+<pre style=\"font-size:16px;font-weight:bold;\">{rawToken}</pre>
+<p>La URL de recuperación es: <a href=\"{recoveryUrl}\">{recoveryUrl}</a></p>
+<p>El código expira en 1 hora.</p>";
+
+        await _emailService.SendEmailAsync(
+            usuario.Email,
+            "Recuperación de contraseña CASATIC",
+            emailBody);
+
         if (_env.IsDevelopment())
         {
             return Ok(new

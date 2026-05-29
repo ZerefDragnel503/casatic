@@ -63,6 +63,10 @@ builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddScoped<ILogService, LogService>();
 builder.Services.AddScoped<EventoService>();
 
+// ── Email SMTP ─────────────────────────────────────────────
+builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("Email"));
+builder.Services.AddSingleton<IEmailService, SmtpEmailService>();
+
 // ── JWT Authentication ────────────────────────────────────
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -202,6 +206,9 @@ builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(o =>
 var app = builder.Build();
 
 // ── Migraciones + Seed ──────────────────────────────────
+// Permite deshabilitar el seeder en desarrollo con SKIP_SEED=true
+var skipSeed = bool.TryParse(builder.Configuration["SKIP_SEED"], out var val) && val;
+
 using (var scope = app.Services.CreateScope())
 {
     try
@@ -213,7 +220,15 @@ using (var scope = app.Services.CreateScope())
         // EnsureCreatedAsync crea el schema desde el modelo si la BD está vacía,
         // y es no-op si ya existe (ej: cuando se restauró backup.sql primero).
         await db.Database.EnsureCreatedAsync();
-        await DataSeeder.SeedAsync(db, app.Configuration, seedLogger);
+        
+        if (!skipSeed)
+        {
+            await DataSeeder.SeedAsync(db, app.Configuration, seedLogger);
+        }
+        else
+        {
+            Log.Information("⏭️  Seeder deshabilitado con SKIP_SEED=true. Usando BD existente sin modificar datos.");
+        }
     }
     catch (Exception ex)
     {

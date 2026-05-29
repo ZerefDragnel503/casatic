@@ -19,6 +19,7 @@ export default function ForgotPasswordPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
+  const [devToken, setDevToken] = useState("");
 
   const passwordValidation = validatePassword(newPassword);
   const matchValidation = validatePasswordMatch(newPassword, confirmPassword);
@@ -30,14 +31,19 @@ export default function ForgotPasswordPage() {
   const hasNumber = /\d/.test(newPassword);
   const hasSpecial = /[^a-zA-Z0-9]/.test(newPassword);
 
-  const goBack = () => { setStep(s => s - 1); setError(""); setSuccess(""); };
+  const goBack = () => { setStep(s => s - 1); setError(""); setSuccess(""); setDevToken(""); };
 
   const handleRequestToken = async (e) => {
     e.preventDefault();
-    setError(""); setSuccess(""); setLoading(true);
+    setError(""); setSuccess(""); setDevToken(""); setLoading(true);
     try {
-      await api.post('/auth/recuperar-password', { email });
-      setSuccess("Se envió un código de recuperación a tu email.");
+      const { data } = await api.post('/auth/recuperar-password', { email });
+      if (data?.devOnly_token) {
+        setDevToken(data.devOnly_token);
+        setSuccess("Se envió un código de recuperación. Usa el token de desarrollo si no recibes el email.");
+      } else {
+        setSuccess("Se envió un código de recuperación a tu email.");
+      }
       setTimeout(() => { setSuccess(""); setStep(2); }, 2000);
     } catch (err) {
       setError(err.response?.data?.message || "Error al enviar el código de recuperación.");
@@ -141,24 +147,30 @@ export default function ForgotPasswordPage() {
                 <span>{success}</span>
               </div>
             )}
+            {devToken && (
+              <div className="alert-info mb-4 rounded-xl border border-casatic-200 bg-casatic-50 p-4 text-sm text-surface-800">
+                <p className="font-semibold">Token de desarrollo:</p>
+                <pre className="mt-2 overflow-x-auto rounded bg-surface-100 p-3 text-[13px] text-surface-700">{devToken}</pre>
+              </div>
+            )}
 
             {/* Step 1 */}
             {step === 1 && (
               <form onSubmit={handleRequestToken} className="space-y-4">
                 <div>
-                  <label className="input-label">Email del administrador</label>
+                  <label className="input-label">Email de la cuenta a recuperar</label>
                   <div className="relative">
                     <Mail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-surface-400" />
                     <input
                       type="email" required
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="admin@casatic.org"
+                      placeholder="usuario@dominio.com"
                       className="input-field pl-10"
                     />
                   </div>
                   <p className="text-xs text-surface-400 mt-1">
-                    Se enviará un código de recuperación a este email.
+                    Ingresa el email de la persona cuya contraseña quieres recuperar.
                   </p>
                 </div>
                 <button
