@@ -1,0 +1,75 @@
+MANUAL DE ADMINISTRADOR - Casatic Directório
+
+Misión:
+Garantizar el correcto funcionamiento de la plataforma, la integridad de los datos y proporcionar herramientas de gestión para las entidades socias.
+
+Visión:
+Mantener una plataforma segura, confiable y escalable que permita a la administración gestionar la comunidad de socios eficientemente.
+
+Introducción:
+Este manual describe las funcionalidades disponibles para administradores, tareas de mantenimiento, procedimientos de seguridad y contacto de soporte técnico.
+
+Acceso y roles:
+- Acceso de administrador: credenciales con permisos elevados. Use autenticación fuerte y, cuando esté disponible, MFA.
+- Roles y permisos: defina perfiles (Superadmin, Administrador de contenido, Finanzas) y asigne permisos según responsabilidades.
+
+Panel de administración:
+- Dashboard: métricas clave (usuarios activos, nuevos socios, eventos recientes, facturación pendiente).
+- Gestión de usuarios: crear, editar, desactivar o eliminar cuentas de usuario.
+- Gestión de socios: validar nuevos socios, editar fichas, aprobar o rechazar información, gestionar logos y recursos.
+- Gestión de contenidos: publicar noticias, eventos y comunicados.
+- Facturación: acceder a facturas, generar reportes y marcar pagos como recibidos.
+
+Tareas administrativas comunes:
+- Aprobar un socio nuevo:
+  1. Ir a "Validaciones" o "Nuevos registros".
+  2. Revisar datos y documentación.
+  3. Pulsar "Aprobar" o "Rechazar" con motivo.
+
+- Editar una ficha de socio:
+  1. Buscar el socio en el panel.
+  2. Abrir la ficha y modificar los campos necesarios.
+  3. Guardar cambios y, si aplica, notificar al socio.
+
+- Gestionar usuarios:
+  1. Acceder a "Usuarios".
+  2. Crear cuenta: introducir datos y asignar rol.
+  3. Restablecer contraseña o desactivar cuenta en caso de abuso.
+
+Mantenimiento y operaciones:
+- Backups: programar copias regulares de la base de datos y exportes de socios.
+- Restauración: procedimientos para restaurar desde backups (pruebas en entorno de staging antes de producción).
+- Logs: monitorizar logs de aplicación y servidor para detectar errores y accesos inusuales.
+- Actualizaciones: aplicar parches y nuevas versiones; preferir despliegues en staging para validación previa.
+- Docker: la plataforma puede ejecutarse con Docker Compose. Para reiniciar servicios:
+  - `docker compose down`
+  - `docker compose up --build -d`
+
+Seguridad y cumplimiento:
+- Actualizaciones de dependencias: mantener librerías actualizadas.
+- Gestión de contraseñas: políticas de fuerza y expiración opcional.
+- Accesos: revisar cuentas con privilegios y revocar accesos innecesarios.
+- Protección de datos: cifrado en tránsito (TLS) y, cuando proceda, cifrado en reposo.
+
+Monitoreo y alertas:
+- Integrar herramientas de monitoreo (Prometheus, Grafana, Sentry) para métricas y errores.
+- Configurar alertas para caídas de servicios, errores críticos y picos de carga.
+
+Resolución de problemas comunes:
+- Error al iniciar contenedores Docker: revisar logs con `docker compose logs` y `docker ps`.
+- Problemas de base de datos: comprobar conexiones, integridad y backups.
+- Fallos de autenticación: revisar proveedor de identidad y logs de seguridad.
+
+Procedimientos de emergencia:
+- Plan de recuperación: pasos para restaurar servicio crítico desde backups y conmutación a entorno de emergencia.
+- Contactos de emergencia: listar responsables técnicos y canales de comunicación.
+
+Registro de cambios y auditoría:
+- Mantener registro de acciones administrativas importantes (aprobaciones, eliminaciones, cambios de rol).
+- Auditar accesos y cambios periódicamente.
+
+Soporte y documentación adicional:
+- Para incidentes graves contacte al responsable técnico.
+- Documentación técnica: mantener repositorio con procedimientos operativos, runbooks y credenciales seguras en gestor de secretos.
+
+Fin del manual de administrador.

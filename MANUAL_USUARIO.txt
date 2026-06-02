@@ -1,0 +1,72 @@
+MANUAL DE USUARIO - Casatic Directório
+
+Misión:
+Nuestra misión es facilitar la visibilidad y el contacto entre las empresas socias, centralizando su información y servicios en una plataforma fácil de usar.
+
+Visión:
+Ser el directorio de referencia para asociaciones empresariales, promoviendo la colaboración, la comunicación y la accesibilidad de servicios.
+
+Introducción:
+Este manual explica las funciones disponibles para usuarios regulares de la plataforma, cómo acceder, realizar tareas comunes y dónde contactar soporte.
+
+Acceso y requisitos:
+- Requisitos: navegador moderno (Chrome, Edge, Firefox), conexión a Internet.
+- Registro/Login: use el formulario de acceso para entrar con correo y contraseña. Si olvidó su contraseña, solicite restablecerla desde la pantalla de login.
+
+Navegación principal:
+- Panel principal: acceso rápido a búsqueda, últimas actualizaciones y atajos.
+- Menú de directorio: busque socios por nombre, sector, localidad o palabra clave.
+- Perfil de socio: al abrir un socio verá descripción, servicios, logos, datos de contacto y enlaces.
+- Formulario de contacto: envíe mensajes al socio directamente desde su ficha.
+
+Funciones principales que encontrará:
+- Buscar socios: filtro por categorías, orden por relevancia o fecha.
+- Ver y descargar recursos: logos y documentos públicos que el socio comparta.
+- Contactar a un socio: formulario interno que envía una notificación al socio (no revela correos si el socio lo oculta).
+- Enviar un formulario de interés: para recibir información o presupuestos.
+- Gestionar su perfil (si aplica): editar datos de su propia empresa, horarios, descripción, redes.
+- Subir/actualizar logo: acceda a su perfil y cargue imágenes en formato PNG o JPG (máx. 2 MB).
+
+Tareas comunes (paso a paso):
+- Buscar un socio:
+  1. Ir al menú "Directorio".
+  2. Escribir palabra clave en la barra de búsqueda.
+  3. Aplicar filtros si lo desea y pulsar "Buscar".
+  4. Seleccionar el resultado para ver su ficha.
+
+- Contactar desde la ficha:
+  1. Abrir la ficha del socio.
+  2. Completar el formulario de contacto (asunto y mensaje).
+  3. Pulsar "Enviar". Recibirá confirmación en la plataforma.
+
+- Actualizar su perfil:
+  1. Acceder a "Mi empresa" o "Mi perfil".
+  2. Editar campos necesarios.
+  3. Guardar los cambios.
+
+Facturación y reportes (si habilitado):
+- Acceda a la sección "Facturación" para ver facturas relacionadas con servicios contratados.
+- Descargue PDF o consulte el estado de pago.
+
+Notificaciones y mensajes:
+- Recibirá notificaciones en la plataforma por nuevos mensajes, solicitudes o cambios aceptados.
+- Revise el icono de notificaciones en la cabecera.
+
+Seguridad y buenas prácticas:
+- Use contraseñas seguras y no comparta su cuenta.
+- Cierre sesión en equipos compartidos.
+- No suba información sensible en campos públicos.
+
+Soporte y contacto:
+- Para problemas técnicos contacte al equipo de soporte (indique el error, pasos para reproducirlo y captura si es posible).
+- Correo de soporte: soporte@casatic.local (reemplazar por el correo real)
+
+Preguntas frecuentes (rápido):
+- ¿Cómo recupero mi contraseña? Use "Olvidé mi contraseña" en la pantalla de login.
+- ¿Puedo eliminar mi cuenta? Contacte soporte para solicitar eliminación.
+
+Anexos:
+- Recomendaciones de formato para logos: PNG o JPG, 300x300 px máximo recomendado.
+- Límites de tamaño para ficheros: 2 MB por archivo.
+
+Fin del manual de usuario.

@@ -1,12 +1,5 @@
-# ══════════════════════════════════════════════════════════════
-# docker-compose.yml — Directorio Interactivo CASATIC 2026
-# Stack: PostgreSQL + API .NET 8 + Frontend React + pgAdmin
-#
-# Todos los secretos se leen del archivo .env (no se sube a Git).
-# Copiar .env.example → .env y rellenar valores antes de levantar.
-# ══════════════════════════════════════════════════════════════
+version: '3.8'
 services:
-  # ── PostgreSQL ──────────────────────────────────────────
   db:
     image: postgres:16-alpine
     container_name: casatic-db
@@ -19,14 +12,12 @@ services:
       LANG: C.UTF-8
       LC_ALL: C.UTF-8
     command: ["postgres", "-c", "client_encoding=UTF8"]
-    # En producción comentá este `ports` para que la BD sólo sea
-    # accesible desde la red interna de Docker.
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./backend/docker script/01-init-schema.sql:/docker-entrypoint-initdb.d/01-init-schema.sql:ro
-      - ./backend/docker script/socios-current.sql:/docker-entrypoint-initdb.d/02-socios-current.sql:ro
+      - ./backend/docker script/02-socios-current.sql:/docker-entrypoint-initdb.d/02-socios-current.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
@@ -34,7 +25,6 @@ services:
       retries: 10
     networks: [casatic-net]
 
-  # ── pgAdmin ─────────────────────────────────────────────
   pgadmin:
     image: dpage/pgadmin4:latest
     container_name: casatic-pgadmin
@@ -50,7 +40,6 @@ services:
         condition: service_healthy
     networks: [casatic-net]
 
-  # ── Backend API (.NET 8) ───────────────────────────────
   api:
     build:
       context: ./backend
@@ -78,7 +67,6 @@ services:
         condition: service_healthy
     networks: [casatic-net]
 
-  # ── Frontend React (Nginx) ──────────────────────────────
   frontend:
     build:
       context: ./frontend
